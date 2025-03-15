@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Book</title>
+</head>
+<body>
+    <h1>Add a Book</h1>
+    <form method="POST">
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" required><br>
+        <label for="genre_id">Genre:</label>
+        <select id="genre_id" name="genre_id" required>
+            {% for genre in genres %}
+                <option value="{{ genre[0] }}">{{ genre[1] }}</option>
+            {% endfor %}
+        </select><br>
+        <label for="release_year">Release Year:</label>
+        <input type="number" id="release_year" name="release_year" required><br>
+        <label for="publisher">Publisher:</label>
+        <input type="text" id="publisher" name="publisher"><br>
+        <label for="page_count">Page Count:</label>
+        <input type="number" id="page_count" name="page_count"><br>
+        <label for="description">Description:</label>
+        <textarea id="description" name="description"></textarea><br>
+        <label for="author_id">Author:</label>
+        <select id="author_id" name="author_id">
+            <option value="">Select an existing author</option>
+            {% for author in authors %}
+                <option value="{{ author[0] }}">{{ author[1] }}</option>
+            {% endfor %}
+        </select><br>
+        <label for="new_author">Or enter a new author:</label>
+        <input type="text" id="new_author" name="new_author"><br>
+        <label for="location_id">Purchase Location:</label>
+        <select id="location_id" name="location_id">
+            <option value="">Select an existing location</option>
+            {% for location in locations %}
+                <option value="{{ location[0] }}">{{ location[1] }}</option>
+            {% endfor %}
+        </select><br>
+        <label for="new_location_name">Or enter a new location name:</label>
+        <input type="text" id="new_location_name" name="new_location_name"><br>
+        <label for="new_location_address">New location address:</label>
+        <input type="text" id="new_location_address" name="new_location_address"><br>
+        <button type="submit">Add Book</button>
+    </form>
+    <br>
+    <button onclick="window.location.href='{{ url_for('home') }}'">Return to Home Page</button
+</body>
+</html>
