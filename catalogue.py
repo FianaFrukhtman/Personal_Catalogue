@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
+import re
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -127,11 +128,28 @@ def register():
         username = request.form['username'].strip()
         password = request.form['password']
         
+        # Check for special characters in username and password
+        if not re.match("^[a-zA-Z0-9_]*$", username):
+            flash('Username can only contain letters, numbers, and underscores.')
+            return redirect(url_for('register'))
+        
+        if not re.match("^[a-zA-Z0-9_]*$", password):
+            flash('Password can only contain letters, numbers, and underscores.')
+            return redirect(url_for('register'))
+        
         with sqlite3.connect(DATABASE) as conn:
             cur = conn.cursor()
+            cur.execute("SELECT * FROM Users WHERE username = ?", (username,))
+            user = cur.fetchone()
+            
+            if user:
+                flash('Username already exists. Please choose a different username.')
+                return redirect(url_for('register'))
+            
             cur.execute("INSERT INTO Users (username, password) VALUES (?, ?)", (username, password))
             conn.commit()
         
+        flash('Registration successful. Please log in.')
         return redirect(url_for('login'))
     
     return render_template('register.html')
@@ -152,13 +170,14 @@ def login():
                 session['username'] = user[1]  # Store the username in the session
                 return redirect(url_for('home'))
             else:
-                return "Invalid credentials"
+                flash('Invalid credentials. Please try again.')
+                return redirect(url_for('login'))
     
     return render_template('login.html')
 
 @app.route('/')
-def root():
-    return redirect(url_for('login'))
+def welcome():
+    return render_template('welcome.html')
 
 @app.route('/home')
 def home():
