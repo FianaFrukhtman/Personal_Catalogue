@@ -3,7 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}"> -->
     <title>Add Book</title>
+    <script>
+        let authors = {{ authors|tojson }};
+        let locations = {{ locations|tojson }};
+
+        function filterSuggestions(inputId, suggestions, listId) {
+            const input = document.getElementById(inputId);
+            const list = document.getElementById(listId);
+            const filter = input.value.toLowerCase();
+            list.innerHTML = '';
+
+            suggestions
+                .filter(item => item.toLowerCase().includes(filter))
+                .forEach(item => {
+                    const option = document.createElement('div');
+                    option.textContent = item;
+                    option.onclick = () => {
+                        input.value = item;
+                        list.innerHTML = '';
+                    };
+                    list.appendChild(option);
+                });
+        }
+
+        function hideSuggestions() {
+            document.getElementById('author_suggestions').innerHTML = '';
+            document.getElementById('location_suggestions').innerHTML = '';
+        }
+
+        // Add event listeners to hide suggestions when other fields are focused
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputs = document.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                input.addEventListener('focus', hideSuggestions);
+            });
+        });
+    </script>
+    <style>
+        .suggestions {
+            border: 1px solid #ccc;
+            max-height: 150px;
+            overflow-y: auto;
+            position: absolute;
+            background: white;
+            z-index: 1000;
+        }
+        .suggestions div {
+            padding: 5px;
+            cursor: pointer;
+        }
+        .suggestions div:hover {
+            background: #f0f0f0;
+        }
+    </style>
 </head>
 <body>
     <h1>Add a Book</h1>
@@ -24,29 +78,18 @@
         <input type="number" id="page_count" name="page_count"><br>
         <label for="description">Description:</label>
         <textarea id="description" name="description"></textarea><br>
-        <label for="author_id">Author:</label>
-        <select id="author_id" name="author_id">
-            <option value="">Select an existing author</option>
-            {% for author in authors %}
-                <option value="{{ author[0] }}">{{ author[1] }}</option>
-            {% endfor %}
-        </select><br>
-        <label for="new_author">Or enter a new author:</label>
-        <input type="text" id="new_author" name="new_author"><br>
-        <label for="location_id">Purchase Location:</label>
-        <select id="location_id" name="location_id">
-            <option value="">Select an existing location</option>
-            {% for location in locations %}
-                <option value="{{ location[0] }}">{{ location[1] }}</option>
-            {% endfor %}
-        </select><br>
-        <label for="new_location_name">Or enter a new location name:</label>
-        <input type="text" id="new_location_name" name="new_location_name"><br>
-        <label for="new_location_address">New location address:</label>
-        <input type="text" id="new_location_address" name="new_location_address"><br>
+        
+        <label for="author_input">Author:</label>
+        <input type="text" id="author_input" name="author_input" oninput="filterSuggestions('author_input', authors, 'author_suggestions')">
+        <div id="author_suggestions" class="suggestions"></div><br>
+        
+        <label for="location_input">Purchase Location:</label>
+        <input type="text" id="location_input" name="location_input" oninput="filterSuggestions('location_input', locations, 'location_suggestions')">
+        <div id="location_suggestions" class="suggestions"></div><br>
+        
         <button type="submit">Add Book</button>
     </form>
     <br>
-    <button onclick="window.location.href='{{ url_for('home') }}'">Return to Home Page</button
+    <button onclick="window.location.href='{{ url_for('home') }}'">Return to Home Page</button>
 </body>
 </html>

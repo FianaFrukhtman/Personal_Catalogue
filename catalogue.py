@@ -196,21 +196,32 @@ def add_book():
         publisher = request.form['publisher']
         page_count = request.form['page_count']
         description = request.form['description']
-        author_id = request.form['author_id']
-        new_author = request.form['new_author']
-        location_id = request.form['location_id']
-        new_location_name = request.form['new_location_name']
-        new_location_address = request.form['new_location_address']
+        author_name = request.form['author_input']
+        location_name = request.form['location_input']
         user_id = session['user_id']
         
         with sqlite3.connect(DATABASE) as conn:
             cur = conn.cursor()
-            if new_author:
-                cur.execute('INSERT INTO Media_Creators (name, type) VALUES (?, ?)', (new_author, 'Author'))
+            
+            # Check if the author already exists, otherwise insert a new one
+            cur.execute('SELECT creator_id FROM Media_Creators WHERE name = ? AND type = "Author"', (author_name,))
+            author = cur.fetchone()
+            if author:
+                author_id = author[0]
+            else:
+                cur.execute('INSERT INTO Media_Creators (name, type) VALUES (?, "Author")', (author_name,))
                 author_id = cur.lastrowid
-            if new_location_name:
-                cur.execute('INSERT INTO Purchase_Locations (loc_name, address) VALUES (?, ?)', (new_location_name, new_location_address))
+            
+            # Check if the location already exists, otherwise insert a new one
+            cur.execute('SELECT location_id FROM Purchase_Locations WHERE loc_name = ?', (location_name,))
+            location = cur.fetchone()
+            if location:
+                location_id = location[0]
+            else:
+                cur.execute('INSERT INTO Purchase_Locations (loc_name) VALUES (?)', (location_name,))
                 location_id = cur.lastrowid
+            
+            # Insert the book into Media_Item and Books tables
             cur.execute('''
                 INSERT INTO Media_Item (title, genre_id, release_year, user_id, media_type, creator_id, location_id)
                 VALUES (?, ?, ?, ?, 'Book', ?, ?)
@@ -228,29 +239,71 @@ def add_book():
         cur = conn.cursor()
         cur.execute('SELECT genre_id, genre_name FROM Genres')
         genres = cur.fetchall()
-        cur.execute('SELECT creator_id, name FROM Media_Creators WHERE type = "Author"')
-        authors = cur.fetchall()
-        cur.execute('SELECT location_id, loc_name FROM Purchase_Locations')
-        locations = cur.fetchall()
+        cur.execute('SELECT name FROM Media_Creators WHERE type = "Author"')
+        authors = [row[0] for row in cur.fetchall()]
+        cur.execute('SELECT loc_name FROM Purchase_Locations')
+        locations = [row[0] for row in cur.fetchall()]
     
     return render_template('add_book.html', genres=genres, authors=authors, locations=locations)
 
-@app.route('/view_books')
+@app.route('/view_books', methods=['GET', 'POST'])
 def view_books():
+    if 'user_id' in session:
+        user_id = session['user_id']
+        genre_filter = request.args.get('genre', None)
+        sort_by = request.args.get('sort', None)
+
+        query = '''
+            SELECT Media_Item.media_id, Media_Item.title, Media_Creators.name, Books.page_count, 
+                   Books.description, Books.publisher, Genres.genre_name
+            FROM Media_Item
+            JOIN Books ON Media_Item.media_id = Books.media_id
+            JOIN Media_Creators ON Media_Item.creator_id = Media_Creators.creator_id
+            JOIN Genres ON Media_Item.genre_id = Genres.genre_id
+            WHERE Media_Item.user_id = ?
+        '''
+        params = [user_id]
+
+        # Apply genre filter if selected
+        if genre_filter:
+            query += ' AND Genres.genre_name = ?'
+            params.append(genre_filter)
+
+        # Apply sorting if selected
+        if sort_by == 'title':
+            query += ' ORDER BY Media_Item.title ASC'
+        elif sort_by == 'author':
+            query += ' ORDER BY Media_Creators.name ASC'
+        elif sort_by == 'page_count':
+            query += ' ORDER BY Books.page_count ASC'
+
+        with sqlite3.connect(DATABASE) as conn:
+            cur = conn.cursor()
+            cur.execute(query, params)
+            books = cur.fetchall()
+
+            # Fetch all genres for the filter dropdown
+            cur.execute('SELECT genre_name FROM Genres')
+            genres = [row[0] for row in cur.fetchall()]
+
+        return render_template('view_books.html', books=books, genres=genres, selected_genre=genre_filter, sort_by=sort_by)
+    else:
+        return redirect(url_for('login'))
+
+@app.route('/delete_book/<int:book_id>', methods=['POST'])
+def delete_book(book_id):
     if 'user_id' in session:
         user_id = session['user_id']
         with sqlite3.connect(DATABASE) as conn:
             cur = conn.cursor()
+            # Ensure the book belongs to the logged-in user before deleting
             cur.execute('''
-                SELECT Media_Item.title,Media_Creators.name, Books.page_count, Books.description, Books.publisher
-                FROM Media_Item
-                JOIN Books ON Media_Item.media_id = Books.media_id
-                JOIN Media_Creators ON Media_Item.creator_id = Media_Creators.creator_id
-                WHERE Media_Item.user_id = ?
-            ''', (user_id,))
-            books = cur.fetchall()
-        
-        return render_template('view_books.html', books=books)
+                DELETE FROM Media_Item
+                WHERE media_id = ? AND user_id = ?
+            ''', (book_id, user_id))
+            conn.commit()
+        flash('Book deleted successfully.')
+        return redirect(url_for('view_books'))
     else:
         return redirect(url_for('login'))
 
