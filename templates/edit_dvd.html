@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit DVD</title>
+</head>
+<body>
+    <h1>Edit DVD</h1>
+    <form method="POST" action="{{ url_for('edit_dvd', dvd_id=dvd['media_id']) }}">
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" value="{{ dvd['title'] }}" required><br><br>
+
+        <label for="genre_id">Genre:</label>
+        <select id="genre_id" name="genre_id" required>
+            {% for genre_id, genre_name in genres %}
+                <option value="{{ genre_id }}" {% if genre_id == dvd['genre_id'] %}selected{% endif %}>{{ genre_name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="release_year">Release Year:</label>
+        <input type="number" id="release_year" name="release_year" value="{{ dvd['release_year'] }}" required><br><br>
+
+        <label for="runtime">Runtime (minutes):</label>
+        <input type="number" id="runtime" name="runtime" value="{{ dvd['runtime'] }}" required><br><br>
+
+        <label for="studio">Studio:</label>
+        <input type="text" id="studio" name="studio" value="{{ dvd['studio'] }}" required><br><br>
+
+        <label for="dvd_type">DVD Type:</label>
+        <input type="text" id="dvd_type" name="dvd_type" value="{{ dvd['DVD_type'] }}" required><br><br>
+
+        <label for="director_input">Director:</label>
+        <input type="text" id="director_input" name="director_input" list="directors" value="{{ dvd['director'] }}" required>
+        <datalist id="directors">
+            {% for director in directors %}
+                <option value="{{ director }}">
+            {% endfor %}
+        </datalist><br><br>
+
+        <label for="location_input">Purchase Location:</label>
+        <input type="text" id="location_input" name="location_input" list="locations" value="{{ dvd['loc_name'] }}" required>
+        <datalist id="locations">
+            {% for location in locations %}
+                <option value="{{ location }}">
+            {% endfor %}
+        </datalist><br><br>
+
+        <button type="submit">Save Changes</button>
+    </form>
+    <a href="{{ url_for('view_dvds') }}">Back to DVDs</a>
+</body>
+</html>

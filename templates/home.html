@@ -3,14 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
     <title>Home</title>
 </head>
-<body>
-    <h1>Welcome, {{ username }}!</h1>
-    <ul>
-        <li><a href="{{ url_for('add_book') }}">Add a Book</a></li>
-        <li><a href="{{ url_for('view_books') }}">View Books</a></li>
-    </ul>
-    <button onclick="window.location.href='{{ url_for('logout') }}'">Logout</button>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+    <header>
+        <div class="header-container">
+            <h1>Welcome, {{ username }}!</h1>
+            <button onclick="window.location.href='{{ url_for('settings') }}'" class="settings-btn">Settings</button>
+            <button onclick="window.location.href='{{ url_for('logout') }}'" class="logout-btn">Logout</button>
+        </div>
+    </header>
+    <main>
+        <p>What would you like to do today?</p>
+        <button onclick="window.location.href='{{ url_for('add_book') }}'">Add a Book</button>
+        <button onclick="window.location.href='{{ url_for('view_books') }}'">View Your Books</button>
+        <button onclick="window.location.href='{{ url_for('add_dvd') }}'">Add a DVD</button>
+        <button onclick="window.location.href='{{ url_for('view_dvds') }}'">View Your DVDs</button>
+    </main>
+    <footer>
+        <p>Created by Fiana Frukhtman</p>
+    </footer>
 </body>
 </html>

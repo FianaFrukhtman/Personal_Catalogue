@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
+    <title>Settings</title>
+</head>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+    <header>
+        <h1>Settings</h1>
+    </header>
+    <main>
+        <form method="POST">
+            <label>
+                <input type="checkbox" name="night_mode" {% if night_mode %}checked{% endif %}>
+                Enable Night Mode
+            </label>
+            <button type="submit">Save</button>
+        </form>
+    </main>
+    <footer>
+        <p>Created by Fiana Frukhtman</p>
+    </footer>
+</body>
+</html>
