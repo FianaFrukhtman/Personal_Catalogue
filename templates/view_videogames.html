@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View Video Games</title>
+</head>
+<body>
+    <h1>Video Games</h1>
+    <form method="GET">
+        <label for="genre">Filter by Genre:</label>
+        <select id="genre" name="genre">
+            <option value="">All</option>
+            {% for genre in genres %}
+            <option value="{{ genre }}" {% if genre == selected_genre %}selected{% endif %}>{{ genre }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="sort">Sort by:</label>
+        <select id="sort" name="sort">
+            <option value="">None</option>
+            <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
+            <option value="developer" {% if sort_by == 'developer' %}selected{% endif %}>Developer</option>
+            <option value="console" {% if sort_by == 'console' %}selected{% endif %}>Console</option>
+        </select>
+
+        <button type="submit">Apply</button>
+    </form>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Genre</th>
+                <th>Release Year</th>
+                <th>Console</th>
+                <th>Developer</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for game in videogames %}
+            <tr>
+                <td>{{ game.title }}</td>
+                <td>{{ game.genre }}</td>
+                <td>{{ game.release_year }}</td>
+                <td>{{ game.console }}</td>
+                <td>{{ game.developer }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+<br>
+    <button onclick="window.location.href='{{ url_for('home') }}'">Return to Home Page</button>
+</html>

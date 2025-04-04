@@ -306,6 +306,63 @@ def add_dvd():
     
     return render_template('add_dvd.html', genres=genres, directors=directors, locations=locations)
 
+@app.route('/add_videogame', methods=['GET', 'POST'])
+def add_videogame():
+    if request.method == 'POST':
+        title = request.form['title']
+        genre_id = request.form['genre_id']
+        release_year = request.form['release_year']
+        console = request.form['console']
+        developer_name = request.form['developer_input']
+        location_name = request.form['location_input']
+        user_id = session['user_id']
+        
+        with sqlite3.connect(DATABASE) as conn:
+            cur = conn.cursor()
+            
+            # Check if the developer already exists, otherwise insert a new one
+            cur.execute('SELECT creator_id FROM Media_Creators WHERE name = ? AND type = "Designer"', (developer_name,))
+            developer = cur.fetchone()
+            if developer:
+                developer_id = developer[0]
+            else:
+                cur.execute('INSERT INTO Media_Creators (name, type) VALUES (?, "Designer")', (developer_name,))
+                developer_id = cur.lastrowid
+            
+            # Check if the location already exists, otherwise insert a new one
+            cur.execute('SELECT location_id FROM Purchase_Locations WHERE loc_name = ?', (location_name,))
+            location = cur.fetchone()
+            if location:
+                location_id = location[0]
+            else:
+                cur.execute('INSERT INTO Purchase_Locations (loc_name) VALUES (?)', (location_name,))
+                location_id = cur.lastrowid
+            
+            # Insert the video game into Media_Item and VideoGames tables
+            cur.execute('''
+                INSERT INTO Media_Item (title, genre_id, release_year, user_id, media_type, creator_id, location_id)
+                VALUES (?, ?, ?, ?, 'VideoGame', ?, ?)
+            ''', (title, genre_id, release_year, user_id, developer_id, location_id))
+            media_id = cur.lastrowid
+            cur.execute('''
+                INSERT INTO VideoGames (media_id, console)
+                VALUES (?, ?)
+            ''', (media_id, console))
+            conn.commit()
+        
+        return redirect(url_for('view_videogames'))
+    
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT genre_id, genre_name FROM Genres')
+        genres = cur.fetchall()
+        cur.execute('SELECT name FROM Media_Creators WHERE type = "Designer"')
+        developers = [row[0] for row in cur.fetchall()]
+        cur.execute('SELECT loc_name FROM Purchase_Locations')
+        locations = [row[0] for row in cur.fetchall()]
+    
+    return render_template('add_videogame.html', genres=genres, developers=developers, locations=locations)
+
 @app.route('/view_books', methods=['GET', 'POST'])
 def view_books():
     if 'user_id' in session:
@@ -392,6 +449,51 @@ def view_dvds():
             genres = [row['genre_name'] for row in cur.fetchall()]
 
         return render_template('view_dvds.html', dvds=dvds, genres=genres, selected_genre=genre_filter, sort_by=sort_by)
+    else:
+        return redirect(url_for('login'))
+
+@app.route('/view_videogames', methods=['GET', 'POST'])
+def view_videogames():
+    if 'user_id' in session:
+        user_id = session['user_id']
+        genre_filter = request.args.get('genre', None)
+        sort_by = request.args.get('sort', None)
+
+        query = '''
+            SELECT Media_Item.media_id, Media_Item.title, Genres.genre_name AS genre, Media_Item.release_year,
+                   VideoGames.console, Media_Creators.name AS developer
+            FROM Media_Item
+            JOIN VideoGames ON Media_Item.media_id = VideoGames.media_id
+            JOIN Media_Creators ON Media_Item.creator_id = Media_Creators.creator_id
+            JOIN Genres ON Media_Item.genre_id = Genres.genre_id
+            WHERE Media_Item.user_id = ?
+        '''
+        params = [user_id]
+
+        # Apply genre filter if selected
+        if genre_filter:
+            query += ' AND Genres.genre_name = ?'
+            params.append(genre_filter)
+
+        # Apply sorting if selected
+        if sort_by == 'title':
+            query += ' ORDER BY Media_Item.title ASC'
+        elif sort_by == 'developer':
+            query += ' ORDER BY Media_Creators.name ASC'
+        elif sort_by == 'console':
+            query += ' ORDER BY VideoGames.console ASC'
+
+        with sqlite3.connect(DATABASE) as conn:
+            conn.row_factory = sqlite3.Row  # Enable dictionary-like access
+            cur = conn.cursor()
+            cur.execute(query, params)
+            videogames = cur.fetchall()
+
+            # Fetch all genres for the filter dropdown
+            cur.execute('SELECT genre_name FROM Genres')
+            genres = [row['genre_name'] for row in cur.fetchall()]
+
+        return render_template('view_videogames.html', videogames=videogames, genres=genres, selected_genre=genre_filter, sort_by=sort_by)
     else:
         return redirect(url_for('login'))
 
