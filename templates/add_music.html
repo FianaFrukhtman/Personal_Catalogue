@@ -35,7 +35,7 @@
 
         <label for="location_input">Purchase Location:</label>
         <input type="text" id="location_input" name="location_input" required><br>
-
+        <p><strong>Select the media format:</strong> (At least one required)</p>
         <label>
             <input type="checkbox" name="is_cd"> Add as CD
         </label><br>
@@ -54,7 +54,7 @@
             <input type="text" name="track_names" placeholder="Track Name 1">
         </div>
         <button type="button" id="add-track-btn">Add Another Track</button><br>
-
+        <br>
         <button type="submit">Add Music</button>
     </form>
 
@@ -77,6 +77,8 @@
             trackNamesContainer.appendChild(input);
         });
     </script>
-     <button onclick="window.location.href='{{ url_for('home') }}'">Back to Home</button>
+    <br>
+    <br>
+    <button type="button" onclick="window.location.href='{{ url_for('home') }}'">Back to Home</button>
 </body>
 </html>
