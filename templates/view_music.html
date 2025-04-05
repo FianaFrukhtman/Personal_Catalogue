@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Music</title>
+</head>
+<body>
+    <h1>Your Music Collection</h1>
+
+    <form method="GET">
+        <!-- Genre Filter -->
+        <label for="genre">Filter by Genre:</label>
+        <select id="genre" name="genre">
+            <option value="">All</option>
+            {% for genre in genres %}
+                <option value="{{ genre }}" {% if genre == selected_genre %}selected{% endif %}>
+                    {{ genre }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <!-- Sort Options -->
+        <label for="sort">Sort by:</label>
+        <select id="sort" name="sort">
+            <option value="">None</option>
+            <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
+            <option value="creator" {% if sort_by == 'creator' %}selected{% endif %}>Creator</option>
+            <option value="album_title" {% if sort_by == 'album_title' %}selected{% endif %}>Album Title</option>
+        </select>
+
+        <!-- Media Format Filter -->
+        <label for="media_format">Format:</label>
+        <select id="media_format" name="media_format">
+            <option value="">All Formats</option>
+            <option value="CD" {% if selected_format == 'CD' %}selected{% endif %}>CD</option>
+            <option value="Vinyl" {% if selected_format == 'Vinyl' %}selected{% endif %}>Vinyl</option>
+        </select>
+
+        <button type="submit">Apply</button>
+    </form>
+
+    <!-- Music Items Table -->
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Album Title</th>
+                <th>Track Count</th>
+                <th>Runtime</th>
+                <th>Creator</th>
+                <th>Genre</th>
+                <th>Release Year</th>
+                <th>Tracks</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in music_items %}
+                <tr>
+                    <td>{{ item.title }}</td>
+                    <td>{{ item.album_title }}</td>
+                    <td>{{ item.track_count }}</td>
+                    <td>{{ item.runtime }}</td>
+                    <td>{{ item.creator }}</td>
+                    <td>{{ item.genre }}</td>
+                    <td>{{ item.release_year }}</td>
+                    <td>{{ item.track_names or 'N/A' }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="8" style="text-align:center;">No music items found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <br>
+    <button onclick="window.location.href='{{ url_for('home') }}'">Back to Home</button>
+</body>
+</html>

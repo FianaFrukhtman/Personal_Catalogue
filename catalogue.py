@@ -10,7 +10,6 @@ DATABASE = 'Personal.db'
 def init_db():
     with sqlite3.connect(DATABASE) as conn:
         cur = conn.cursor()
-        
         cur.executescript('''
             CREATE TABLE IF NOT EXISTS Users (
                 user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,7 +23,7 @@ def init_db():
                 genre_id INTEGER NOT NULL,
                 release_year INTEGER NOT NULL,
                 user_id INTEGER NOT NULL,
-                media_type TEXT NOT NULL CHECK(media_type IN ('Book', 'CD', 'DVD', 'Vinyl', 'VideoGame')),
+                media_type TEXT NOT NULL CHECK(media_type IN ('Book', 'CD', 'DVD', 'Vinyl', 'VideoGame', 'Music')),
                 creator_id INTEGER NOT NULL,
                 location_id INTEGER, 
                 FOREIGN KEY (genre_id) REFERENCES Genres (genre_id) ON DELETE SET NULL,
@@ -95,6 +94,13 @@ def init_db():
                 console TEXT NOT NULL,
                 FOREIGN KEY (media_id) REFERENCES Media_Item (media_id) ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS Tracks (
+                track_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                album_id INTEGER NOT NULL,
+                track_name TEXT NOT NULL,
+                FOREIGN KEY (album_id) REFERENCES Albums (album_id) ON DELETE CASCADE
+            );
         ''')
         
         # Insert predefined genres
@@ -108,7 +114,22 @@ def init_db():
             ('Mystery',),
             ('Romance',),
             ('Sci-Fi',),
-            ('Thriller',)
+            ('Thriller',),
+            # Music-specific genres
+            ('Pop',),
+            ('Rock',),
+            ('Jazz',),
+            ('Classical',),
+            ('Hip-Hop',),
+            ('Electronic',),
+            ('Country',),
+            ('Blues',),
+            ('Reggae',),
+            ('Soul',),
+            ('Metal',),
+            ('Folk',),
+            ('R&B',),
+            ('Punk',)
         ]
         cur.executemany('INSERT OR IGNORE INTO Genres (genre_name) VALUES (?)', genres)
         
@@ -363,6 +384,95 @@ def add_videogame():
     
     return render_template('add_videogame.html', genres=genres, developers=developers, locations=locations)
 
+@app.route('/add_music', methods=['GET', 'POST'])
+def add_music():
+    if request.method == 'POST':
+        title = request.form['title']
+        genre_id = request.form['genre_id']
+        release_year = request.form['release_year']
+        album_title = request.form['album_title']
+        track_count = request.form['track_count']
+        runtime = request.form['runtime']
+        track_names = request.form.getlist('track_names')  # Get track names as a list
+        creator_name = request.form['creator_input']
+        location_name = request.form['location_input']
+        user_id = session['user_id']
+        is_cd = 'is_cd' in request.form
+        is_vinyl = 'is_vinyl' in request.form
+        disc_count = request.form.get('disc_count') if is_vinyl else None
+
+        with sqlite3.connect(DATABASE) as conn:
+            cur = conn.cursor()
+
+            # Check if the creator already exists, otherwise insert a new one
+            cur.execute('SELECT creator_id FROM Media_Creators WHERE name = ? AND type = "Singer/Band"', (creator_name,))
+            creator = cur.fetchone()
+            if creator:
+                creator_id = creator[0]
+            else:
+                cur.execute('INSERT INTO Media_Creators (name, type) VALUES (?, "Singer/Band")', (creator_name,))
+                creator_id = cur.lastrowid
+
+            # Check if the location already exists, otherwise insert a new one
+            cur.execute('SELECT location_id FROM Purchase_Locations WHERE loc_name = ?', (location_name,))
+            location = cur.fetchone()
+            if location:
+                location_id = location[0]
+            else:
+                cur.execute('INSERT INTO Purchase_Locations (loc_name) VALUES (?)', (location_name,))
+                location_id = cur.lastrowid
+
+            # Insert the album into Albums table
+            cur.execute('''
+                INSERT INTO Albums (album_title, creator_id, track_count, runtime)
+                VALUES (?, ?, ?, ?)
+            ''', (album_title, creator_id, track_count, runtime))
+            album_id = cur.lastrowid
+
+            # Insert the media item into Media_Item table
+            cur.execute('''
+                INSERT INTO Media_Item (title, genre_id, release_year, user_id, media_type, creator_id, location_id)
+                VALUES (?, ?, ?, ?, 'Music', ?, ?)
+            ''', (title, genre_id, release_year, user_id, creator_id, location_id))
+            media_id = cur.lastrowid
+
+            # Insert into CDs table if applicable
+            if is_cd:
+                cur.execute('''
+                    INSERT INTO CDs (media_id, album_id)
+                    VALUES (?, ?)
+                ''', (media_id, album_id))
+
+            # Insert into Vinyls table if applicable
+            if is_vinyl:
+                cur.execute('''
+                    INSERT INTO Vinyls (media_id, album_id, disc_count)
+                    VALUES (?, ?, ?)
+                ''', (media_id, album_id, disc_count))
+
+            # Insert track names into Tracks table if provided
+            if track_names:
+                for track_name in track_names:
+                    if track_name.strip():  # Ensure track name is not empty
+                        cur.execute('''
+                            INSERT INTO Tracks (album_id, track_name)
+                            VALUES (?, ?)
+                        ''', (album_id, track_name.strip()))
+
+            conn.commit()
+
+        flash('Music item added successfully.')
+        return redirect(url_for('home'))
+
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT genre_id, genre_name FROM Genres')
+        genres = cur.fetchall()
+        cur.execute('SELECT loc_name FROM Purchase_Locations')
+        locations = [row[0] for row in cur.fetchall()]
+
+    return render_template('add_music.html', genres=genres, locations=locations)
+
 @app.route('/view_books', methods=['GET', 'POST'])
 def view_books():
     if 'user_id' in session:
@@ -497,6 +607,59 @@ def view_videogames():
     else:
         return redirect(url_for('login'))
 
+@app.route('/view_music', methods=['GET', 'POST'])
+def view_music():
+    if 'user_id' in session:
+        user_id = session['user_id']
+        genre_filter = request.args.get('genre', None)
+        sort_by = request.args.get('sort', None)
+        media_format = request.args.get('media_format', None)  # New filter
+
+        query = '''
+            SELECT Media_Item.media_id, Media_Item.title, Albums.album_title, Albums.track_count, Albums.runtime,
+                   Media_Creators.name AS creator, Genres.genre_name AS genre, Media_Item.release_year,
+                   GROUP_CONCAT(Tracks.track_name, ', ') AS track_names
+            FROM Media_Item
+            JOIN Albums ON Media_Item.media_id = Albums.album_id
+            JOIN Media_Creators ON Media_Item.creator_id = Media_Creators.creator_id
+            JOIN Genres ON Media_Item.genre_id = Genres.genre_id
+            LEFT JOIN Tracks ON Albums.album_id = Tracks.album_id
+            WHERE Media_Item.user_id = ?
+        '''
+        params = [user_id]
+
+        if genre_filter:
+            query += ' AND Genres.genre_name = ?'
+            params.append(genre_filter)
+
+        if media_format == 'CD':
+            query += ' AND Media_Item.media_id IN (SELECT media_id FROM CDs)'
+        elif media_format == 'Vinyl':
+            query += ' AND Media_Item.media_id IN (SELECT media_id FROM Vinyls)'
+
+        if sort_by == 'title':
+            query += ' ORDER BY Media_Item.title ASC'
+        elif sort_by == 'creator':
+            query += ' ORDER BY Media_Creators.name ASC'
+        elif sort_by == 'album_title':
+            query += ' ORDER BY Albums.album_title ASC'
+
+        query += ' GROUP BY Media_Item.media_id'
+
+        with sqlite3.connect(DATABASE) as conn:
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute(query, params)
+            music_items = cur.fetchall()
+
+            cur.execute('SELECT genre_name FROM Genres')
+            genres = [row['genre_name'] for row in cur.fetchall()]
+
+        return render_template('view_music.html', music_items=music_items, genres=genres, selected_genre=genre_filter, sort_by=sort_by, selected_format=media_format)
+    else:
+        return redirect(url_for('login'))
+
+
 @app.route('/delete_book/<int:book_id>', methods=['POST'])
 def delete_book(book_id):
     if 'user_id' in session:
@@ -528,6 +691,23 @@ def delete_dvd(dvd_id):
             conn.commit()
         flash('DVD deleted successfully.')
         return redirect(url_for('view_dvds'))
+    else:
+        return redirect(url_for('login'))
+
+@app.route('/delete_videogame/<int:videogame_id>', methods=['POST'])
+def delete_videogame(videogame_id):
+    if 'user_id' in session:
+        user_id = session['user_id']
+        with sqlite3.connect(DATABASE) as conn:
+            cur = conn.cursor()
+            # Ensure the video game belongs to the logged-in user before deleting
+            cur.execute('''
+                DELETE FROM Media_Item
+                WHERE media_id = ? AND user_id = ?
+            ''', (videogame_id, user_id))
+            conn.commit()
+        flash('Video game deleted successfully.')
+        return redirect(url_for('view_videogames'))
     else:
         return redirect(url_for('login'))
 
@@ -695,6 +875,86 @@ def edit_dvd(dvd_id):
         return redirect(url_for('view_dvds'))
     
     return render_template('edit_dvd.html', dvd=dvd, genres=genres, directors=directors, locations=locations)
+
+@app.route('/edit_videogame/<int:videogame_id>', methods=['GET', 'POST'])
+def edit_videogame(videogame_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+    
+    with sqlite3.connect(DATABASE) as conn:
+        conn.row_factory = sqlite3.Row  # Enable dictionary-like access
+        cur = conn.cursor()
+        # Ensure the video game belongs to the logged-in user
+        cur.execute('''
+            SELECT Media_Item.media_id, Media_Item.title, Media_Item.genre_id, Media_Item.release_year, 
+                   VideoGames.console, Media_Creators.name AS developer, Purchase_Locations.loc_name
+            FROM Media_Item
+            JOIN VideoGames ON Media_Item.media_id = VideoGames.media_id
+            JOIN Media_Creators ON Media_Item.creator_id = Media_Creators.creator_id
+            LEFT JOIN Purchase_Locations ON Media_Item.location_id = Purchase_Locations.location_id
+            WHERE Media_Item.media_id = ? AND Media_Item.user_id = ?
+        ''', (videogame_id, user_id))
+        videogame = cur.fetchone()
+        
+        if not videogame:
+            flash('Video game not found or you do not have permission to edit it.')
+            return redirect(url_for('view_videogames'))
+        
+        cur.execute('SELECT genre_id, genre_name FROM Genres')
+        genres = cur.fetchall()
+        cur.execute('SELECT name FROM Media_Creators WHERE type = "Designer"')
+        developers = [row['name'] for row in cur.fetchall()]
+        cur.execute('SELECT loc_name FROM Purchase_Locations')
+        locations = [row['loc_name'] for row in cur.fetchall()]
+    
+    if request.method == 'POST':
+        title = request.form['title']
+        genre_id = request.form['genre_id']
+        release_year = request.form['release_year']
+        console = request.form['console']
+        developer_name = request.form['developer_input']
+        location_name = request.form['location_input']
+        
+        with sqlite3.connect(DATABASE) as conn:
+            cur = conn.cursor()
+            
+            # Check if the developer already exists, otherwise insert a new one
+            cur.execute('SELECT creator_id FROM Media_Creators WHERE name = ? AND type = "Designer"', (developer_name,))
+            developer = cur.fetchone()
+            if developer:
+                developer_id = developer[0]
+            else:
+                cur.execute('INSERT INTO Media_Creators (name, type) VALUES (?, "Designer")', (developer_name,))
+                developer_id = cur.lastrowid
+            
+            # Check if the location already exists, otherwise insert a new one
+            cur.execute('SELECT location_id FROM Purchase_Locations WHERE loc_name = ?', (location_name,))
+            location = cur.fetchone()
+            if location:
+                location_id = location[0]
+            else:
+                cur.execute('INSERT INTO Purchase_Locations (loc_name) VALUES (?)', (location_name,))
+                location_id = cur.lastrowid
+            
+            # Update the Media_Item and VideoGames tables
+            cur.execute('''
+                UPDATE Media_Item
+                SET title = ?, genre_id = ?, release_year = ?, creator_id = ?, location_id = ?
+                WHERE media_id = ? AND user_id = ?
+            ''', (title, genre_id, release_year, developer_id, location_id, videogame_id, user_id))
+            cur.execute('''
+                UPDATE VideoGames
+                SET console = ?
+                WHERE media_id = ?
+            ''', (console, videogame_id))
+            conn.commit()
+        
+        flash('Video game updated successfully.')
+        return redirect(url_for('view_videogames'))
+    
+    return render_template('edit_videogame.html', videogame=videogame, genres=genres, developers=developers, locations=locations)
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():

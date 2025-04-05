@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Music</title>
+</head>
+<body>
+    <h1>Add Music</h1>
+    <form method="POST">
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" required><br>
+
+        <label for="genre_id">Genre:</label>
+        <select id="genre_id" name="genre_id" required>
+            {% for genre_id, genre_name in genres %}
+                <option value="{{ genre_id }}">{{ genre_name }}</option>
+            {% endfor %}
+        </select><br>
+
+        <label for="release_year">Release Year:</label>
+        <input type="number" id="release_year" name="release_year" required><br>
+
+        <label for="album_title">Album Title:</label>
+        <input type="text" id="album_title" name="album_title" required><br>
+
+        <label for="track_count">Track Count:</label>
+        <input type="number" id="track_count" name="track_count" required><br>
+
+        <label for="runtime">Runtime (minutes):</label>
+        <input type="number" id="runtime" name="runtime" required><br>
+
+        <label for="creator_input">Creator (Singer/Band):</label>
+        <input type="text" id="creator_input" name="creator_input" required><br>
+
+        <label for="location_input">Purchase Location:</label>
+        <input type="text" id="location_input" name="location_input" required><br>
+
+        <label>
+            <input type="checkbox" name="is_cd"> Add as CD
+        </label><br>
+
+        <label>
+            <input type="checkbox" name="is_vinyl"> Add as Vinyl
+        </label><br>
+
+        <div id="vinyl_details" style="display: none;">
+            <label for="disc_count">Disc Count:</label>
+            <input type="number" id="disc_count" name="disc_count"><br>
+        </div>
+
+        <label for="track_names">Track Names (Optional):</label>
+        <div id="track-names-container">
+            <input type="text" name="track_names" placeholder="Track Name 1">
+        </div>
+        <button type="button" id="add-track-btn">Add Another Track</button><br>
+
+        <button type="submit">Add Music</button>
+    </form>
+
+    <script>
+        const isVinylCheckbox = document.querySelector('input[name="is_vinyl"]');
+        const vinylDetails = document.getElementById('vinyl_details');
+
+        isVinylCheckbox.addEventListener('change', () => {
+            vinylDetails.style.display = isVinylCheckbox.checked ? 'block' : 'none';
+        });
+
+        const addTrackBtn = document.getElementById('add-track-btn');
+        const trackNamesContainer = document.getElementById('track-names-container');
+
+        addTrackBtn.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'track_names';
+            input.placeholder = `Track Name ${trackNamesContainer.children.length + 1}`;
+            trackNamesContainer.appendChild(input);
+        });
+    </script>
+     <button onclick="window.location.href='{{ url_for('home') }}'">Back to Home</button>
+</body>
+</html>
