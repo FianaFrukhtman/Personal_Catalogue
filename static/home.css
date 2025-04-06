@@ -24,7 +24,7 @@ body.night-mode header, body.night-mode footer {
 
 .header-container {
     display: flex;
-    justify-content: space-between;
+    justify-content: right;
     align-items: center;
     padding: 10px 20px;
 }
@@ -101,4 +101,67 @@ footer {
 
 .settings-btn:hover {
     background-color: #117bc1;
+}
+
+.button-box-container {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+/* Individual button boxes */
+.button-box {
+    background-color: #f2f2f2;
+    padding: 20px;
+    border-radius: 10px;
+    width: 250px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Box headings */
+.button-box h2 {
+    margin-bottom: 15px;
+}
+
+/* Buttons inside boxes */
+.button-box button {
+    display: block;
+    width: 100%;
+    margin: 8px 0;
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background-color: #007BFF;
+    color: white;
+    transition: background-color 0.3s;
+}
+
+.button-box button:hover {
+    background-color: #0056b3;
+}
+
+/* Night Mode Styling */
+body.night-mode {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+body.night-mode .button-box {
+    background-color: #2c2c2c;
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.05);
+}
+
+body.night-mode .button-box button {
+    background-color: #a0acbb;
+    color: white;
+}
+
+body.night-mode .button-box button:hover {
+    background-color: #357ab8;
 }

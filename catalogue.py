@@ -613,6 +613,7 @@ def view_videogames():
         return render_template('view_videogames.html', videogames=videogames, genres=genres, selected_genre=genre_filter, sort_by=sort_by)
     else:
         return redirect(url_for('login'))
+
 @app.route('/view_music', methods=['GET', 'POST'])
 def view_music():
     if 'user_id' not in session:
@@ -704,6 +705,56 @@ def view_music():
         search_track=search_track
     )
 
+@app.route('/view_all', methods=['GET'])
+def view_all():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    search_query = request.args.get('search', '').strip()
+    sort_by = request.args.get('sort', 'media_type')  # Default sort by media_type
+    filter_type = request.args.get('type', '')  # Filter by media_type
+
+    # Allowed sort options
+    sort_options = {
+        'title': 'Media_Item.title',
+        'media_type': 'Media_Item.media_type',
+        'release_year': 'Media_Item.release_year'
+    }
+    sort_clause = sort_options.get(sort_by, 'Media_Item.media_type')  # Fallback to media_type
+
+    # Base query
+    query = '''
+        SELECT Media_Item.media_id, Media_Item.title, Media_Item.media_type, Media_Item.release_year, 
+               Genres.genre_name, Media_Creators.name AS creator
+        FROM Media_Item
+        JOIN Genres ON Media_Item.genre_id = Genres.genre_id
+        JOIN Media_Creators ON Media_Item.creator_id = Media_Creators.creator_id
+        WHERE Media_Item.user_id = ?
+    '''
+    params = [user_id]
+
+    # Apply search filter
+    if search_query:
+        query += ' AND Media_Item.title LIKE ?'
+        params.append(f"%{search_query}%")
+
+    # Apply type filter
+    if filter_type:
+        query += ' AND Media_Item.media_type = ?'
+        params.append(filter_type)
+
+    # Apply sorting
+    query += f' ORDER BY {sort_clause} COLLATE NOCASE'
+
+    # Execute query
+    with sqlite3.connect(DATABASE) as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(query, params)
+        items = cur.fetchall()
+
+    return render_template('view_all.html', items=items, search_query=search_query, sort_by=sort_by, filter_type=filter_type)
 
 @app.route('/delete_book/<int:book_id>', methods=['POST'])
 def delete_book(book_id):

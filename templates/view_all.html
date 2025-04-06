@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View All Items</title>
+</head>
+<body>
+    <h1>All Media Items</h1>
+    <form method="GET" action="{{ url_for('view_all') }}">
+        <label for="search">Search by Title:</label>
+        <input type="text" id="search" name="search" value="{{ search_query }}">
+        
+        <label for="type">Filter by Type:</label>
+        <select id="type" name="type">
+            <option value="" {% if not filter_type %}selected{% endif %}>All</option>
+            <option value="Book" {% if filter_type == 'Book' %}selected{% endif %}>Book</option>
+            <option value="CD" {% if filter_type == 'CD' %}selected{% endif %}>CD</option>
+            <option value="DVD" {% if filter_type == 'DVD' %}selected{% endif %}>DVD</option>
+            <option value="Vinyl" {% if filter_type == 'Vinyl' %}selected{% endif %}>Vinyl</option>
+            <option value="VideoGame" {% if filter_type == 'VideoGame' %}selected{% endif %}>Video Game</option>
+        </select>
+
+        <label for="sort">Sort by:</label>
+        <select id="sort" name="sort">
+            <option value="media_type" {% if sort_by == 'media_type' %}selected{% endif %}>Type</option>
+            <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
+            <option value="release_year" {% if sort_by == 'release_year' %}selected{% endif %}>Release Year</option>
+        </select>
+        <button type="submit">Apply</button>
+    </form>
+    <br>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Release Year</th>
+                <th>Genre</th>
+                <th>Creator</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+                <tr>
+                    <td>{{ item.title }}</td>
+                    <td>{{ item.media_type }}</td>
+                    <td>{{ item.release_year }}</td>
+                    <td>{{ item.genre_name }}</td>
+                    <td>{{ item.creator }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    <button onclick="window.location.href='{{ url_for('home') }}'">Back to Home</button>
+</body>
+</html>
