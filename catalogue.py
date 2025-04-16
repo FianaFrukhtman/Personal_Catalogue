@@ -710,51 +710,114 @@ def view_all():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    user_id = session['user_id']
+    user_id      = session['user_id']
     search_query = request.args.get('search', '').strip()
-    sort_by = request.args.get('sort', 'media_type')  # Default sort by media_type
-    filter_type = request.args.get('type', '')  # Filter by media_type
+    sort_by      = request.args.get('sort', 'media_type')
+    filter_type  = request.args.get('type', '')
 
-    # Allowed sort options
     sort_options = {
-        'title': 'Media_Item.title',
-        'media_type': 'Media_Item.media_type',
+        'title':        'Media_Item.title',
+        'media_type':   'Media_Item.media_type',
         'release_year': 'Media_Item.release_year'
     }
-    sort_clause = sort_options.get(sort_by, 'Media_Item.media_type')  # Fallback to media_type
+    sort_clause = sort_options.get(sort_by, 'Media_Item.media_type')
 
-    # Base query
-    query = '''
-        SELECT Media_Item.media_id, Media_Item.title, Media_Item.media_type, Media_Item.release_year, 
-               Genres.genre_name, Media_Creators.name AS creator
-        FROM Media_Item
-        JOIN Genres ON Media_Item.genre_id = Genres.genre_id
-        JOIN Media_Creators ON Media_Item.creator_id = Media_Creators.creator_id
-        WHERE Media_Item.user_id = ?
+    base_query = '''
+        SELECT Media_Item.media_id,
+               Media_Item.title,
+               Media_Item.media_type,
+               Media_Item.release_year,
+               Genres.genre_name,
+               Media_Creators.name AS creator
+          FROM Media_Item
+          JOIN Genres         ON Media_Item.genre_id   = Genres.genre_id
+          JOIN Media_Creators ON Media_Item.creator_id = Media_Creators.creator_id
+         WHERE Media_Item.user_id = ?
     '''
     params = [user_id]
 
-    # Apply search filter
     if search_query:
-        query += ' AND Media_Item.title LIKE ?'
-        params.append(f"%{search_query}%")
-
-    # Apply type filter
+        base_query += ' AND Media_Item.title LIKE ?'
+        params.append(f'%{search_query}%')
     if filter_type:
-        query += ' AND Media_Item.media_type = ?'
+        base_query += ' AND Media_Item.media_type = ?'
         params.append(filter_type)
 
-    # Apply sorting
-    query += f' ORDER BY {sort_clause} COLLATE NOCASE'
+    base_query += f' ORDER BY {sort_clause} COLLATE NOCASE'
 
-    # Execute query
     with sqlite3.connect(DATABASE) as conn:
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        cur.execute(query, params)
+
+        # 1) Fetch the items themselves
+        cur.execute(base_query, params)
         items = cur.fetchall()
 
-    return render_template('view_all.html', items=items, search_query=search_query, sort_by=sort_by, filter_type=filter_type)
+        # 2) Total count & breakdown by media_type
+        cur.execute('SELECT COUNT(*) AS total FROM Media_Item WHERE user_id = ?', (user_id,))
+        total = cur.fetchone()['total'] or 0
+
+        cur.execute('''
+            SELECT media_type, COUNT(*) AS cnt
+              FROM Media_Item
+             WHERE user_id = ?
+             GROUP BY media_type
+        ''', (user_id,))
+        stats_rows = cur.fetchall()
+
+        # 3) Average release year
+        cur.execute('SELECT AVG(release_year) AS avg_year FROM Media_Item WHERE user_id = ?', (user_id,))
+        avg_row = cur.fetchone()
+        avg_year = round(avg_row['avg_year'], 2) if avg_row and avg_row['avg_year'] else None
+
+        # 4) Most‐frequent creator per media_type
+        cur.execute('''
+            SELECT Media_Item.media_type,
+                   Media_Creators.name AS creator,
+                   COUNT(*) AS cnt
+              FROM Media_Item
+              JOIN Media_Creators
+                ON Media_Item.creator_id = Media_Creators.creator_id
+             WHERE Media_Item.user_id = ?
+             GROUP BY Media_Item.media_type, Media_Creators.name
+             ORDER BY Media_Item.media_type, cnt DESC
+        ''', (user_id,))
+        creator_rows = cur.fetchall()
+
+    # Build stats list and top‐creators list
+    facts = []
+    for row in stats_rows:
+        c   = row['cnt']
+        pct = round((c / total) * 100, 2) if total else 0
+        facts.append({
+            'media_type': row['media_type'],
+            'count':      c,
+            'percent':    pct
+        })
+
+    seen = set()
+    top_creators = []
+    for row in creator_rows:
+        mt = row['media_type']
+        if mt not in seen:
+            seen.add(mt)
+            top_creators.append({
+                'media_type': mt,
+                'creator':    row['creator'],
+                'count':      row['cnt']
+            })
+            
+
+    return render_template('view_all.html',
+                           items=items,
+                           search_query=search_query,
+                           sort_by=sort_by,
+                           filter_type=filter_type,
+                           total=total,
+                           facts=facts,
+                           avg_year=avg_year,
+                           top_creators=top_creators)
+
 
 @app.route('/delete_book/<int:book_id>', methods=['POST'])
 def delete_book(book_id):

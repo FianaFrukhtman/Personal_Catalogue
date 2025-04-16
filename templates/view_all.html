@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View All Items</title>
 </head>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <body>
     <h1>All Media Items</h1>
     <form method="GET" action="{{ url_for('view_all') }}">
@@ -53,6 +54,110 @@
         </tbody>
     </table>
     <br>
-    <button onclick="window.location.href='{{ url_for('home') }}'">Back to Home</button>
+    <button onclick="window.location.href='{{ url_for('home') }}'">
+      Back to Home
+    </button>
+
+        <!-- hidden statistics panel -->
+        <div id="nerd-facts" style="display: none; margin-top: 20px;">
+            <h2>Nerd Facts</h2>
+            <div  
+                id="chart-container"
+                style="width: 500px; height: 500px; margin: auto;"
+            >
+                <canvas id="typeDistributionChart"> </canvas>
+            </div>
+            <!-- total + breakdown -->
+            <p><strong>Total items:</strong> {{ total }}</p>
+            <table border="1" cellpadding="5">
+              <thead>
+                <tr>
+                  <th>Media Type</th>
+                  <th>Count</th>
+                  <th>Percentage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for f in facts %}
+                <tr>
+                  <td>{{ f.media_type }}</td>
+                  <td>{{ f.count }}</td>
+                  <td>{{ f.percent }} %</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+      
+            <!-- new: average release year -->
+            <p style="margin-top: 1em;">
+              <strong>Average Release Year:</strong>
+              {% if avg_year is not none %}
+                {{ avg_year }}
+              {% else %}
+                N/A
+              {% endif %}
+            </p>
+      
+            <!-- new: top creator per media type -->
+            <h3>Top Creator by Media Type</h3>
+            <table border="1" cellpadding="5">
+              <thead>
+                <tr>
+                  <th>Media Type</th>
+                  <th>Creator</th>
+                  <th># of Items</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for tc in top_creators %}
+                <tr>
+                  <td>{{ tc.media_type }}</td>
+                  <td>{{ tc.creator }}</td>
+                  <td>{{ tc.count }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+        </div>
+      
+
+        <button id="show-nerd-facts">Nerd Facts</button>
+        <script>
+            document.getElementById('show-nerd-facts').addEventListener('click', function() {
+              // show the panel
+              document.getElementById('nerd-facts').style.display = 'block';
+              this.style.display = 'none';
+          
+              // build the pie chart once
+              const facts = {{ facts|tojson }};
+              const labels = facts.map(f => f.media_type);
+              const counts = facts.map(f => f.count);
+          
+              const ctx = document.getElementById('typeDistributionChart').getContext('2d');
+              new Chart(ctx, {
+                type: 'pie',
+                data: {
+                  labels: labels,
+                  datasets: [{
+                    data: counts,
+                    // Chart.js will auto‑pick colors if you leave out backgroundColor
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'bottom'
+                    },
+                    title: {
+                      display: true,
+                      text: 'Collection by Media Type'
+                    }
+                  }
+                }
+              });
+            });
+          </script>
 </body>
 </html>
