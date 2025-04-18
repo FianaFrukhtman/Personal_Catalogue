@@ -359,6 +359,7 @@ def add_videogame():
                 cur.execute('INSERT INTO Purchase_Locations (loc_name) VALUES (?)', (location_name,))
                 location_id = cur.lastrowid
             
+            
             # Insert the video game into Media_Item and VideoGames tables
             cur.execute('''
                 INSERT INTO Media_Item (title, genre_id, release_year, user_id, media_type, creator_id, location_id)
@@ -381,8 +382,10 @@ def add_videogame():
         developers = [row[0] for row in cur.fetchall()]
         cur.execute('SELECT loc_name FROM Purchase_Locations')
         locations = [row[0] for row in cur.fetchall()]
+        cur.execute('SELECT DISTINCT console FROM VideoGames')
+        consoles = [row[0] for row in cur.fetchall()]
     
-    return render_template('add_videogame.html', genres=genres, developers=developers, locations=locations)
+    return render_template('add_videogame.html', genres=genres, developers=developers, locations=locations, consoles=consoles )
 
 @app.route('/add_music', methods=['GET', 'POST'])
 def add_music():
@@ -465,8 +468,6 @@ def add_music():
                     ''', (album_id, track_name.strip()))
 
             conn.commit()
-
-        flash('Music item added successfully.')
         return redirect(url_for('home'))
 
     # GET method: load form
@@ -679,7 +680,6 @@ def view_music():
         '''
         params.append(f"%{search_track}%")
 
-    # ✅ Grouping must come before ordering
     query += ' GROUP BY Media_Item.media_id'
     query += f' ORDER BY {sort_clause} COLLATE NOCASE'
 
@@ -784,6 +784,16 @@ def view_all():
         ''', (user_id,))
         creator_rows = cur.fetchall()
 
+        cur.execute('''
+            SELECT release_year, COUNT(*) AS count
+            FROM Media_Item
+            WHERE user_id = ?
+            GROUP BY release_year
+            ORDER BY release_year
+        ''', (user_id,))
+        year_rows = cur.fetchall()
+        year_distribution = [{"year": row["release_year"], "count": row["count"]} for row in year_rows]
+
     # Build stats list and top‐creators list
     facts = []
     for row in stats_rows:
@@ -806,18 +816,10 @@ def view_all():
                 'creator':    row['creator'],
                 'count':      row['cnt']
             })
-            
 
-    return render_template('view_all.html',
-                           items=items,
-                           search_query=search_query,
-                           sort_by=sort_by,
-                           filter_type=filter_type,
-                           total=total,
-                           facts=facts,
-                           avg_year=avg_year,
-                           top_creators=top_creators)
 
+    return render_template('view_all.html', items=items, search_query=search_query, sort_by=sort_by, filter_type=filter_type, 
+                           total=total, facts=facts, avg_year=avg_year, top_creators=top_creators,year_distribution=year_distribution, media_colors=session.get('media_colors'))
 
 @app.route('/delete_book/<int:book_id>', methods=['POST'])
 def delete_book(book_id):
@@ -831,7 +833,6 @@ def delete_book(book_id):
                 WHERE media_id = ? AND user_id = ?
             ''', (book_id, user_id))
             conn.commit()
-        flash('Book deleted successfully.')
         return redirect(url_for('view_books'))
     else:
         return redirect(url_for('login'))
@@ -848,7 +849,6 @@ def delete_dvd(dvd_id):
                 WHERE media_id = ? AND user_id = ?
             ''', (dvd_id, user_id))
             conn.commit()
-        flash('DVD deleted successfully.')
         return redirect(url_for('view_dvds'))
     else:
         return redirect(url_for('login'))
@@ -865,7 +865,6 @@ def delete_videogame(videogame_id):
                 WHERE media_id = ? AND user_id = ?
             ''', (videogame_id, user_id))
             conn.commit()
-        flash('Video game deleted successfully.')
         return redirect(url_for('view_videogames'))
     else:
         return redirect(url_for('login'))
@@ -882,8 +881,6 @@ def delete_music(media_id):
         cur = conn.cursor()
         cur.execute('DELETE FROM Media_Item WHERE media_id = ? AND user_id = ?', (media_id, user_id))
         conn.commit()
-
-    flash('Music item deleted.')
     return redirect(url_for('view_music'))
 
 @app.route('/edit_book/<int:book_id>', methods=['GET', 'POST'])
@@ -909,7 +906,6 @@ def edit_book(book_id):
         book = cur.fetchone()
         
         if not book:
-            flash('Book not found or you do not have permission to edit it.')
             return redirect(url_for('view_books'))
         
         cur.execute('SELECT genre_id, genre_name FROM Genres')
@@ -963,7 +959,6 @@ def edit_book(book_id):
             ''', (publisher, page_count, description, book_id))
             conn.commit()
         
-        flash('Book updated successfully.')
         return redirect(url_for('view_books'))
     
     return render_template('edit_book.html', book=book, genres=genres, authors=authors, locations=locations)
@@ -992,7 +987,6 @@ def edit_dvd(dvd_id):
         dvd = cur.fetchone()
         
         if not dvd:
-            flash('DVD not found or you do not have permission to edit it.')
             return redirect(url_for('view_dvds'))
         
         cur.execute('SELECT genre_id, genre_name FROM Genres')
@@ -1046,7 +1040,6 @@ def edit_dvd(dvd_id):
             ''', (runtime, studio, dvd_type, dvd_id))
             conn.commit()
         
-        flash('DVD updated successfully.')
         return redirect(url_for('view_dvds'))
     
     return render_template('edit_dvd.html', dvd=dvd, genres=genres, directors=directors, locations=locations)
@@ -1074,7 +1067,6 @@ def edit_videogame(videogame_id):
         videogame = cur.fetchone()
         
         if not videogame:
-            flash('Video game not found or you do not have permission to edit it.')
             return redirect(url_for('view_videogames'))
         
         cur.execute('SELECT genre_id, genre_name FROM Genres')
@@ -1125,8 +1117,7 @@ def edit_videogame(videogame_id):
                 WHERE media_id = ?
             ''', (console, videogame_id))
             conn.commit()
-        
-        flash('Video game updated successfully.')
+
         return redirect(url_for('view_videogames'))
     
     return render_template('edit_videogame.html', videogame=videogame, genres=genres, developers=developers, locations=locations)
@@ -1162,7 +1153,6 @@ def edit_music(media_id):
         music = cur.fetchone()
 
         if not music:
-            flash("Music item not found or you don't have permission to edit it.")
             return redirect(url_for('view_music'))
 
         # Fetch supporting data
@@ -1253,7 +1243,6 @@ def edit_music(media_id):
                 if new_name.strip():
                     cur.execute('INSERT INTO Tracks (album_id, track_name) VALUES (?, ?)', (album_id, new_name.strip()))
 
-        flash('Music item updated successfully.')
         return redirect(url_for('view_music'))
 
     return render_template('edit_music.html', music=music, genres=genres, artists=artists, locations=locations, tracks=tracks)
@@ -1263,14 +1252,34 @@ def edit_music(media_id):
 def settings():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     if request.method == 'POST':
         night_mode = request.form.get('night_mode') == 'on'
         session['night_mode'] = night_mode
+
+        # Collect media type colors
+        media_colors = {
+            'Book': request.form.get('color_book', '#e0f7fa'),
+            'DVD': request.form.get('color_dvd', '#fce4ec'),
+            'CD': request.form.get('color_cd', '#fff3e0'),
+            'Vinyl': request.form.get('color_vinyl', '#ede7f6'),
+            'VideoGame': request.form.get('color_game', '#f3e5f5'),
+        }
+        session['media_colors'] = media_colors
+
         return redirect(url_for('home'))
-    
+
     night_mode = session.get('night_mode', False)
-    return render_template('settings.html', night_mode=night_mode)
+    media_colors = session.get('media_colors', {
+        'Book': '#e0f7fa',
+        'DVD': '#fce4ec',
+        'CD': '#fff3e0',
+        'Vinyl': '#ede7f6',
+        'VideoGame': '#f3e5f5'
+    })
+
+    return render_template('settings.html', night_mode=night_mode, media_colors=media_colors)
+
 
 @app.context_processor
 def inject_night_mode():
@@ -1286,3 +1295,4 @@ if __name__ == '__main__':
     init_db()
     app.run(debug=True)
 
+                

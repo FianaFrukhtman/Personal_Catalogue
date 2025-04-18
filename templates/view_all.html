@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View All Items</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='view.css') }}">
 </head>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<body>
+<body class="{{ 'night-mode' if night_mode else '' }}">
     <h1>All Media Items</h1>
     <form method="GET" action="{{ url_for('view_all') }}">
         <label for="search">Search by Title:</label>
         <input type="text" id="search" name="search" value="{{ search_query }}">
-        
         <label for="type">Filter by Type:</label>
         <select id="type" name="type">
             <option value="" {% if not filter_type %}selected{% endif %}>All</option>
@@ -43,7 +43,7 @@
         </thead>
         <tbody>
             {% for item in items %}
-                <tr>
+                <tr style="background-color: {{ media_colors[item.media_type] if media_colors and item.media_type in media_colors else '' }}">
                     <td>{{ item.title }}</td>
                     <td>{{ item.media_type }}</td>
                     <td>{{ item.release_year }}</td>
@@ -66,6 +66,11 @@
                 style="width: 500px; height: 500px; margin: auto;"
             >
                 <canvas id="typeDistributionChart"> </canvas>
+            </div>
+
+            <h2 style="text-align:center;">Media Items by Release Year</h2>
+            <div style="width: 90%; max-width: 800px; margin: 0 auto;">
+                <canvas id="yearBarChart"></canvas>
             </div>
             <!-- total + breakdown -->
             <p><strong>Total items:</strong> {{ total }}</p>
@@ -159,5 +164,44 @@
               });
             });
           </script>
+          <script>
+            const yearData = {{ year_distribution | tojson }};
+            const yearLabels = yearData.map(item => item.year);
+            const yearCounts = yearData.map(item => item.count);
+        
+            const ctxBar = document.getElementById("yearBarChart").getContext("2d");
+            new Chart(ctxBar, {
+                type: "bar",
+                data: {
+                    labels: yearLabels,
+                    datasets: [{
+                        label: "Media Items",
+                        data: yearCounts,
+                        backgroundColor: "rgba(54, 162, 235, 0.7)",
+                        borderColor: "rgba(54, 162, 235, 1)",
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: "Number of Media Items by Release Year"
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        </script>
+        
 </body>
 </html>

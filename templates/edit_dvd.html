@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit DVD</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='edit.css') }}">
 </head>
-<body>
+<body class="{{ 'night-mode' if night_mode else '' }}">
     <h1>Edit DVD</h1>
     <form method="POST" action="{{ url_for('edit_dvd', dvd_id=dvd['media_id']) }}">
         <label for="title">Title:</label>

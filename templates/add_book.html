@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- <link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}"> -->
     <title>Add Book</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='add.css') }}">
     <script>
         let authors = {{ authors|tojson }};
         let locations = {{ locations|tojson }};
@@ -41,25 +42,8 @@
             });
         });
     </script>
-    <style>
-        .suggestions {
-            border: 1px solid #ccc;
-            max-height: 150px;
-            overflow-y: auto;
-            position: absolute;
-            background: white;
-            z-index: 1000;
-        }
-        .suggestions div {
-            padding: 5px;
-            cursor: pointer;
-        }
-        .suggestions div:hover {
-            background: #f0f0f0;
-        }
-    </style>
 </head>
-<body>
+<body class="{{ 'night-mode' if night_mode else '' }}">
     <h1>Add a Book</h1>
     <form method="POST">
         <label for="title">Title:</label>
@@ -80,12 +64,16 @@
         <textarea id="description" name="description"></textarea><br>
         
         <label for="author_input">Author:</label>
-        <input type="text" id="author_input" name="author_input" oninput="filterSuggestions('author_input', authors, 'author_suggestions')">
-        <div id="author_suggestions" class="suggestions"></div><br>
-        
+        <div class="input-wrapper">
+            <input type="text" id="author_input" name="author_input" oninput="filterSuggestions('author_input', authors, 'author_suggestions')">
+            <div id="author_suggestions" class="suggestions"></div>
+        </div><br>
+
         <label for="location_input">Purchase Location:</label>
-        <input type="text" id="location_input" name="location_input" oninput="filterSuggestions('location_input', locations, 'location_suggestions')">
-        <div id="location_suggestions" class="suggestions"></div><br>
+        <div class="input-wrapper">
+            <input type="text" id="location_input" name="location_input" oninput="filterSuggestions('location_input', locations, 'location_suggestions')">
+            <div id="location_suggestions" class="suggestions"></div>
+        </div><br>
         
         <button type="submit">Add Book</button>
     </form>

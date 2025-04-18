@@ -57,7 +57,9 @@ body.night-mode button {
 }
 
 button:hover {background-color: #45a049;}
-  
+
+
+
 button:active {
     background-color: #45a049;
     box-shadow: 0 1px #666;
@@ -163,5 +165,12 @@ body.night-mode .button-box button {
 }
 
 body.night-mode .button-box button:hover {
-    background-color: #357ab8;
+    background-color: #007BFF;
 }
+
+/* Night mode hover for View All button */
+body.night-mode .view-all-btn:hover {
+    background-color: green;
+    color: white;
+}
+

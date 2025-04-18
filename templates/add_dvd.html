@@ -4,8 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add DVD</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='add.css') }}">
+    <script>
+        let directors = {{ directors|tojson }};
+        let locations = {{ locations|tojson }};
+    
+        function filterSuggestions(inputId, suggestions, listId) {
+            const input = document.getElementById(inputId);
+            const list = document.getElementById(listId);
+            const filter = input.value.toLowerCase();
+            list.innerHTML = '';
+    
+            suggestions
+                .filter(item => item.toLowerCase().includes(filter))
+                .forEach(item => {
+                    const option = document.createElement('div');
+                    option.textContent = item;
+                    option.onclick = () => {
+                        input.value = item;
+                        list.innerHTML = '';
+                    };
+                    list.appendChild(option);
+                });
+        }
+    
+        function hideSuggestions() {
+            document.querySelectorAll('.suggestions').forEach(el => el.innerHTML = '');
+        }
+    
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('input, textarea, select').forEach(input => {
+                input.addEventListener('focus', hideSuggestions);
+            });
+        });
+    </script>
 </head>
-<body>
+
+<body class="{{ 'night-mode' if night_mode else '' }}">
     <h1>Add DVD</h1>
     <form method="POST" action="{{ url_for('add_dvd') }}">
         <label for="title">Title:</label>
@@ -31,20 +66,19 @@
         <input type="text" id="dvd_type" name="dvd_type" required><br><br>
 
         <label for="director_input">Director:</label>
-        <input type="text" id="director_input" name="director_input" list="directors" required>
-        <datalist id="directors">
-            {% for director in directors %}
-                <option value="{{ director }}">
-            {% endfor %}
-        </datalist><br><br>
-
+        <div class="input-wrapper">
+            <input type="text" id="director_input" name="director_input"
+                   oninput="filterSuggestions('director_input', directors, 'director_suggestions')">
+            <div id="director_suggestions" class="suggestions"></div>
+        </div><br>
+        
         <label for="location_input">Purchase Location:</label>
-        <input type="text" id="location_input" name="location_input" list="locations" required>
-        <datalist id="locations">
-            {% for location in locations %}
-                <option value="{{ location }}">
-            {% endfor %}
-        </datalist><br><br>
+        <div class="input-wrapper">
+            <input type="text" id="location_input" name="location_input"
+                   oninput="filterSuggestions('location_input', locations, 'location_suggestions')">
+            <div id="location_suggestions" class="suggestions"></div>
+        </div><br>
+        
 
         <button type="submit">Add DVD</button>
     </form>

@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Edit Video Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='edit.css') }}">
 </head>
-<body>
+<body class="{{ 'night-mode' if night_mode else '' }}">
     <h1>Edit Video Game</h1>
     <form method="POST">
         <label for="title">Title:</label>

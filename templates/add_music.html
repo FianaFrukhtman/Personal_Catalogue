@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Music</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='add.css') }}">
 </head>
-<body>
+<body class="{{ 'night-mode' if night_mode else '' }}"></body>
     <h1>Add Music</h1>
     <form method="POST">
         <label for="title">Title:</label>

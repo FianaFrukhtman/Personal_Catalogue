@@ -2,9 +2,44 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='add.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='add.css') }}">
     <title>Add Video Game</title>
+    <script>
+        let developers = {{ developers|tojson }};
+        let locations = {{ locations|tojson }};
+        let consoles = {{ consoles|tojson }};
+    
+        function filterSuggestions(inputId, suggestions, listId) {
+            const input = document.getElementById(inputId);
+            const list = document.getElementById(listId);
+            const filter = input.value.toLowerCase();
+            list.innerHTML = '';
+    
+            suggestions
+                .filter(item => item.toLowerCase().includes(filter))
+                .forEach(item => {
+                    const option = document.createElement('div');
+                    option.textContent = item;
+                    option.onclick = () => {
+                        input.value = item;
+                        list.innerHTML = '';
+                    };
+                    list.appendChild(option);
+                });
+        }
+    
+        function hideSuggestions() {
+            document.querySelectorAll('.suggestions').forEach(el => el.innerHTML = '');
+        }
+    
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('input, textarea, select').forEach(input => {
+                input.addEventListener('focus', hideSuggestions);
+            });
+        });
+    </script>
 </head>
-<body>
+<body class="{{ 'night-mode' if night_mode else '' }}"></body>
     <h1>Add Video Game</h1>
     <form method="POST">
         <label for="title">Title:</label>
@@ -21,13 +56,26 @@
         <input type="number" id="release_year" name="release_year" required><br>
 
         <label for="console">Console:</label>
-        <input type="text" id="console" name="console" required><br>
+        <div class="input-wrapper">
+            <input type="text" id="console" name="console"
+                   oninput="filterSuggestions('console', consoles, 'console_suggestions')" required>
+            <div id="console_suggestions" class="suggestions"></div>
+        </div><br>
 
         <label for="developer_input">Developer:</label>
-        <input type="text" id="developer_input" name="developer_input" required><br>
-
+        <div class="input-wrapper">
+            <input type="text" id="developer_input" name="developer_input"
+                   oninput="filterSuggestions('developer_input', developers, 'developer_suggestions')">
+            <div id="developer_suggestions" class="suggestions"></div>
+        </div><br>
+        
         <label for="location_input">Purchase Location:</label>
-        <input type="text" id="location_input" name="location_input"><br>
+        <div class="input-wrapper">
+            <input type="text" id="location_input" name="location_input"
+                   oninput="filterSuggestions('location_input', locations, 'location_suggestions')">
+            <div id="location_suggestions" class="suggestions"></div>
+        </div><br>
+        
 
         <button type="submit">Add Video Game</button>
     </form>

@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>View Video Games</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='view.css') }}">
 </head>
-<body>
+<body class="{{ 'night-mode' if night_mode else '' }}">
     <h1>Video Games</h1>
     <form method="GET">
         <label for="genre">Filter by Genre:</label>
