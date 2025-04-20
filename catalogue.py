@@ -101,6 +101,37 @@ def init_db():
                 track_name TEXT NOT NULL,
                 FOREIGN KEY (album_id) REFERENCES Albums (album_id) ON DELETE CASCADE
             );
+                          
+            CREATE TABLE IF NOT EXISTS User_Lists (
+            list_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id   INTEGER NOT NULL,
+            name      TEXT    NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+            UNIQUE(user_id, name)
+            );
+                          
+            CREATE TABLE IF NOT EXISTS List_Items (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            list_id   INTEGER NOT NULL,
+            media_id  INTEGER NOT NULL,
+            FOREIGN KEY(list_id)  REFERENCES User_Lists(list_id) ON DELETE CASCADE,
+            FOREIGN KEY(media_id) REFERENCES Media_Item(media_id) ON DELETE CASCADE,
+            UNIQUE(list_id, media_id)
+            );
+                          
+            CREATE TABLE IF NOT EXISTS Wishlist_Items (
+            wishlist_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id       INTEGER NOT NULL,
+            title         TEXT    NOT NULL,
+            genre_id      INTEGER,
+            release_year  INTEGER,
+            media_type    TEXT    NOT NULL CHECK(media_type IN ('Book','CD','DVD','Vinyl','VideoGame')),
+            creator_name  TEXT    NOT NULL,
+            notes         TEXT,
+            FOREIGN KEY(user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+            FOREIGN KEY(genre_id) REFERENCES Genres(genre_id) ON DELETE SET NULL
+            );
+
         ''')
         
         # Insert predefined genres
@@ -170,6 +201,12 @@ def register():
             
             cur.execute("INSERT INTO Users (username, password) VALUES (?, ?)", (username, password))
             conn.commit()
+
+            new_user_id = cur.lastrowid
+            cur.execute(
+            "INSERT INTO User_Lists (user_id, name) VALUES (?, 'Wishlist')",
+            (new_user_id,)
+            )
         
         flash('Registration successful. Please log in.')
         return redirect(url_for('login'))
@@ -794,6 +831,9 @@ def view_all():
         year_rows = cur.fetchall()
         year_distribution = [{"year": row["release_year"], "count": row["count"]} for row in year_rows]
 
+        cur.execute("SELECT list_id, name FROM User_Lists WHERE user_id = ?", (user_id,))
+        session_lists = cur.fetchall()
+
     # Build stats list and top‐creators list
     facts = []
     for row in stats_rows:
@@ -819,7 +859,7 @@ def view_all():
 
 
     return render_template('view_all.html', items=items, search_query=search_query, sort_by=sort_by, filter_type=filter_type, 
-                           total=total, facts=facts, avg_year=avg_year, top_creators=top_creators,year_distribution=year_distribution, media_colors=session.get('media_colors'))
+                           total=total, facts=facts, avg_year=avg_year, top_creators=top_creators,year_distribution=year_distribution, media_colors=session.get('media_colors'),session_lists=session_lists )
 
 @app.route('/delete_book/<int:book_id>', methods=['POST'])
 def delete_book(book_id):
@@ -1279,6 +1319,252 @@ def settings():
     })
 
     return render_template('settings.html', night_mode=night_mode, media_colors=media_colors)
+
+#LIST AND WISH LIST FUNCTIONS 
+
+@app.route('/lists')
+def view_lists():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    uid = session['user_id']
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT list_id, name FROM User_Lists WHERE user_id = ?", (uid,))
+        lists = cur.fetchall()
+    return render_template('lists.html', lists=lists)
+
+@app.route('/lists/create', methods=['POST'])
+def create_list():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    name = request.form['name'].strip()
+    uid  = session['user_id']
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        cur.execute(
+          "INSERT OR IGNORE INTO User_Lists (user_id, name) VALUES (?, ?)",
+          (uid, name)
+        )
+        conn.commit()
+    return redirect(url_for('view_lists'))
+
+@app.route('/lists/<int:list_id>')
+def show_list(list_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    uid = session['user_id']
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        # security: make sure it belongs to this user
+        cur.execute(
+          "SELECT name FROM User_Lists WHERE list_id = ? AND user_id = ?",
+          (list_id, uid)
+        )
+        row = cur.fetchone()
+        if not row:
+            return redirect(url_for('view_lists'))
+        list_name = row[0]
+
+        cur.execute('''
+          SELECT mi.media_id, mi.title, mi.media_type
+            FROM List_Items li
+            JOIN Media_Item mi ON li.media_id = mi.media_id
+           WHERE li.list_id = ?
+        ''', (list_id,))
+        items = cur.fetchall()
+
+    return render_template('list_detail.html',
+                           list_id=list_id,
+                           list_name=list_name,
+                           items=items)
+
+@app.route('/lists/add', methods=['POST'])
+def add_to_list():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    uid      = session['user_id']
+    list_id  = request.form.get('list_id')
+    media_id = request.form.get('media_id')
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        cur.execute(
+          "SELECT 1 FROM User_Lists WHERE list_id = ? AND user_id = ?",
+          (list_id, uid)
+        )
+        if cur.fetchone():
+            cur.execute(
+              "INSERT OR IGNORE INTO List_Items (list_id, media_id) VALUES (?, ?)",
+              (list_id, media_id)
+            )
+            conn.commit()
+    return redirect(request.referrer or url_for('view_lists'))
+
+
+@app.route('/lists/<int:list_id>/remove/<int:media_id>', methods=['POST'])
+def remove_from_list(list_id, media_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    uid = session['user_id']
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        # ensure ownership
+        cur.execute("SELECT 1 FROM User_Lists WHERE list_id = ? AND user_id = ?", (list_id, uid))
+        if cur.fetchone():
+            cur.execute(
+              "DELETE FROM List_Items WHERE list_id = ? AND media_id = ?",
+              (list_id, media_id)
+            )
+            conn.commit()
+    return redirect(request.referrer or url_for('show_list', list_id=list_id))
+
+
+@app.route('/wishlist')
+def view_wishlist():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    uid = session['user_id']
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        cur.execute('''
+          SELECT w.wishlist_id, w.title, w.media_type, g.genre_name, w.release_year, w.creator_name
+            FROM Wishlist_Items w
+       LEFT JOIN Genres g ON w.genre_id = g.genre_id
+           WHERE w.user_id = ?
+           ORDER BY w.wishlist_id DESC
+        ''', (uid,))
+        wishes = cur.fetchall()
+    return render_template('wishlist.html', wishes=wishes)
+
+
+@app.route('/wishlist/add', methods=['GET','POST'])
+def add_wishlist():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        title        = request.form['title'].strip()
+        media_type   = request.form['media_type']
+        genre_id     = request.form.get('genre_id') or None
+        release_year = request.form.get('release_year') or None
+        creator_name = request.form['creator_name'].strip()
+        notes        = request.form.get('notes','').strip()
+        uid = session['user_id']
+        with sqlite3.connect(DATABASE) as conn:
+            cur = conn.cursor()
+            cur.execute('''
+              INSERT INTO Wishlist_Items
+                (user_id,title,genre_id,release_year,media_type,creator_name,notes)
+              VALUES (?,?,?,?,?,?,?)
+            ''',
+            (uid,title,genre_id,release_year,media_type,creator_name,notes))
+            conn.commit()
+        return redirect(url_for('view_wishlist'))
+
+    # GET: render form
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT genre_id,genre_name FROM Genres')
+        genres = cur.fetchall()
+    return render_template('add_wishlist.html', genres=genres)
+
+
+@app.route('/wishlist/delete/<int:wish_id>', methods=['POST'])
+def delete_wishlist(wish_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    uid = session['user_id']
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        cur.execute('DELETE FROM Wishlist_Items WHERE wishlist_id = ? AND user_id = ?', (wish_id,uid))
+        conn.commit()
+    return redirect(url_for('view_wishlist'))
+
+
+@app.route('/wishlist/convert/<int:wish_id>', methods=['POST'])
+def convert_wishlist(wish_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    uid = session['user_id']
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        # 1) Grab the wishlist entry
+        cur.execute('''
+          SELECT title,genre_id,release_year,media_type,creator_name,notes
+            FROM Wishlist_Items
+           WHERE wishlist_id = ? AND user_id = ?
+        ''', (wish_id,uid))
+        row = cur.fetchone()
+        if not row:
+            flash('That wishlist entry was not found.')
+            return redirect(url_for('view_wishlist'))
+
+        title, genre_id, year, mtype, creator_name, notes = row
+
+        # 2) Ensure creator exists (or insert)
+        #    Map media_type → creator type
+        ctype_map = {
+          'Book':        'Author',
+          'DVD':         'Director',
+          'VideoGame':   'Designer',
+          'CD':          'Singer/Band',
+          'Vinyl':       'Singer/Band'
+        }
+        ctype = ctype_map.get(mtype,'Author')
+        cur.execute('SELECT creator_id FROM Media_Creators WHERE name = ? AND type = ?', (creator_name,ctype))
+        c = cur.fetchone()
+        if c:
+            creator_id = c[0]
+        else:
+            cur.execute('INSERT INTO Media_Creators (name,type) VALUES (?,?)', (creator_name,ctype))
+            creator_id = cur.lastrowid
+
+        # 3) Insert into Media_Item
+        cur.execute('''
+          INSERT INTO Media_Item
+            (title,genre_id,release_year,user_id,media_type,creator_id,location_id)
+          VALUES (?,?,?,?,?,?,NULL)
+        ''', (title,genre_id,year,uid,mtype,creator_id))
+        new_mid = cur.lastrowid
+
+        # 4) Minimal subclass insert (you can let users go edit it later)
+        if mtype == 'Book':
+            cur.execute('''
+              INSERT INTO Books(media_id,publisher,page_count,description)
+              VALUES (?,?,?,?)
+            ''', (new_mid, None, None, notes))
+        elif mtype == 'DVD':
+            cur.execute('''
+              INSERT INTO DVDs(media_id,runtime,studio,DVD_type)
+              VALUES (?,?,?,?)
+            ''', (new_mid, None, None, None))
+        elif mtype in ('CD','Vinyl'):
+            # first create an album record
+            cur.execute('''
+              INSERT INTO Albums(album_title,creator_id,track_count,runtime)
+              VALUES (?, ?, ?, ?)
+            ''', (title, creator_id, None, None))
+            album_id = cur.lastrowid
+            if mtype == 'CD':
+                cur.execute('INSERT INTO CDs(media_id,album_id) VALUES (?,?)', (new_mid,album_id))
+            else:
+                cur.execute('INSERT INTO Vinyls(media_id,album_id,disc_count) VALUES (?,?,?)',
+                            (new_mid,album_id,None))
+        elif mtype == 'VideoGame':
+            cur.execute('INSERT INTO VideoGames(media_id,console) VALUES (?,?)', (new_mid, None))
+
+        # 5) Remove from Wishlist
+        cur.execute('DELETE FROM Wishlist_Items WHERE wishlist_id = ?', (wish_id,))
+        conn.commit()
+
+    flash(f'“{title}” has been added to your collection!')
+    return redirect(url_for('view_books') if mtype=='Book'
+                                   else url_for('view_dvds')    if mtype=='DVD'
+                                   else url_for('view_music')   if mtype in ('CD','Vinyl')
+                                   else url_for('view_videogames'))
+
 
 
 @app.context_processor

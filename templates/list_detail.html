@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ list_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='view.css') }}">
+</head>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+  <h1>{{ list_name }}</h1>
+
+  <ul>
+    {% for mid, title, mtype in items %}
+      <li>
+        {{ title }} <em>({{ mtype }})</em>
+        <form
+          method="post"
+          action="{{ url_for('remove_from_list', list_id=list_id, media_id=mid) }}"
+          style="display:inline"
+        >
+          <button type="submit">Remove</button>
+        </form>
+      </li>
+    {% else %}
+      <li><em>This list is empty.</em></li>
+    {% endfor %}
+  </ul>
+
+  <br>
+  <button onclick="window.location.href='{{ url_for('view_lists') }}'">
+    ← Back to All Lists
+  </button>
+  <button onclick="window.location.href='{{ url_for('home') }}'">
+    Back to Home
+  </button>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your Lists</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='view.css') }}">
+</head>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+  <h1>Your Lists</h1>
+
+  <ul>
+    {% for lid, name in lists %}
+      <li>
+        <a href="{{ url_for('show_list', list_id=lid) }}">{{ name }}</a>
+      </li>
+    {% else %}
+      <li><em>You have no lists yet.</em></li>
+    {% endfor %}
+  </ul>
+
+  <h2>Create a New List</h2>
+  <form method="post" action="{{ url_for('create_list') }}">
+    <input type="text" name="name" placeholder="List name" required>
+    <button type="submit">Create</button>
+  </form>
+
+  <br>
+  <button onclick="window.location.href='{{ url_for('home') }}'">
+    Back to Home
+  </button>
+</body>
+</html>
