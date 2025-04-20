@@ -13,11 +13,27 @@
     {% for lid, name in lists %}
       <li>
         <a href="{{ url_for('show_list', list_id=lid) }}">{{ name }}</a>
+  
+        <!-- delete‑list form -->
+        <form
+          method="POST"
+          action="{{ url_for('delete_list', list_id=lid) }}"
+          style="display:inline; margin-left:1em;"
+        >
+          <button
+            type="button"
+            onclick="if(confirm('Really delete “{{ name }}” and all its items?')) this.form.submit();"
+          >
+            Delete
+          </button>
+        </form>
+  
       </li>
     {% else %}
-      <li><em>You have no lists yet.</em></li>
+      <li><em>No lists yet.</em></li>
     {% endfor %}
   </ul>
+  
 
   <h2>Create a New List</h2>
   <form method="post" action="{{ url_for('create_list') }}">

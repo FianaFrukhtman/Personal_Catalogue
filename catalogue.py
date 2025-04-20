@@ -1402,7 +1402,6 @@ def add_to_list():
             conn.commit()
     return redirect(request.referrer or url_for('view_lists'))
 
-
 @app.route('/lists/<int:list_id>/remove/<int:media_id>', methods=['POST'])
 def remove_from_list(list_id, media_id):
     if 'user_id' not in session:
@@ -1420,6 +1419,28 @@ def remove_from_list(list_id, media_id):
             )
             conn.commit()
     return redirect(request.referrer or url_for('show_list', list_id=list_id))
+
+# just after your create_list() route
+@app.route('/lists/delete/<int:list_id>', methods=['POST'])
+def delete_list(list_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    uid = session['user_id']
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.cursor()
+        # ensure this list belongs to the user
+        cur.execute(
+            "SELECT 1 FROM User_Lists WHERE list_id = ? AND user_id = ?",
+            (list_id, uid)
+        )
+        if cur.fetchone():
+            # ON DELETE CASCADE on List_Items will clean up members
+            cur.execute(
+                "DELETE FROM User_Lists WHERE list_id = ?",
+                (list_id,)
+            )
+            conn.commit()
+    return redirect(url_for('view_lists'))
 
 
 @app.route('/wishlist')
@@ -1498,7 +1519,6 @@ def convert_wishlist(wish_id):
         ''', (wish_id,uid))
         row = cur.fetchone()
         if not row:
-            flash('That wishlist entry was not found.')
             return redirect(url_for('view_wishlist'))
 
         title, genre_id, year, mtype, creator_name, notes = row
@@ -1559,7 +1579,6 @@ def convert_wishlist(wish_id):
         cur.execute('DELETE FROM Wishlist_Items WHERE wishlist_id = ?', (wish_id,))
         conn.commit()
 
-    flash(f'“{title}” has been added to your collection!')
     return redirect(url_for('view_books') if mtype=='Book'
                                    else url_for('view_dvds')    if mtype=='DVD'
                                    else url_for('view_music')   if mtype in ('CD','Vinyl')
