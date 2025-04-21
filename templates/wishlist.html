@@ -9,7 +9,7 @@
 <body class="{{ 'night-mode' if night_mode else '' }}">
   <h1>Your Wishlist</h1>
 
-  <p><a href="{{ url_for('add_wishlist') }}">+ Add New Wishlist Entry</a></p>
+  <button onclick="window.location.href='{{ url_for('add_wishlist') }}'">+ Add New Wishlist Entry</button>
 
   <ul>
     {% for wid, title, mtype, genre, year, creator in wishes %}

@@ -5,15 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Your Lists</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='view.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='lists.css') }}">
 </head>
 <body class="{{ 'night-mode' if night_mode else '' }}">
+  <div class="list-container">
   <h1>Your Lists</h1>
-
   <ul>
     {% for lid, name in lists %}
       <li>
-        <a href="{{ url_for('show_list', list_id=lid) }}">{{ name }}</a>
-  
+        <a href="{{ url_for('show_list', list_id=lid) }}"
+          class="list-card">
+          <span class="list-card__title">{{ name }}</span>
+        </a>
         <!-- delete‑list form -->
         <form
           method="POST"
@@ -33,7 +36,6 @@
       <li><em>No lists yet.</em></li>
     {% endfor %}
   </ul>
-  
 
   <h2>Create a New List</h2>
   <form method="post" action="{{ url_for('create_list') }}">
@@ -45,5 +47,6 @@
   <button onclick="window.location.href='{{ url_for('home') }}'">
     Back to Home
   </button>
+</div>
 </body>
 </html>
