@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View All Items</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='view.css') }}">
+</head>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+    <h1>All Media Items</h1>
+    <form method="GET" action="{{ url_for('view_all') }}">
+        <label for="search">Search by Title:</label>
+        <input type="text" id="search" name="search" value="{{ search_query }}">
+        <label for="type">Filter by Type:</label>
+        <select id="type" name="type">
+            <option value="" {% if not filter_type %}selected{% endif %}>All</option>
+            <option value="Book" {% if filter_type == 'Book' %}selected{% endif %}>Book</option>
+            <option value="CD" {% if filter_type == 'CD' %}selected{% endif %}>CD</option>
+            <option value="DVD" {% if filter_type == 'DVD' %}selected{% endif %}>DVD</option>
+            <option value="Vinyl" {% if filter_type == 'Vinyl' %}selected{% endif %}>Vinyl</option>
+            <option value="VideoGame" {% if filter_type == 'VideoGame' %}selected{% endif %}>Video Game</option>
+        </select>
+
+        <label for="sort">Sort by:</label>
+        <select id="sort" name="sort">
+            <option value="media_type" {% if sort_by == 'media_type' %}selected{% endif %}>Type</option>
+            <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
+            <option value="release_year" {% if sort_by == 'release_year' %}selected{% endif %}>Release Year</option>
+        </select>
+        <button type="submit">Apply</button>
+    </form>
+    <button onclick="window.location.href='{{ url_for('home') }}'">
+      Back to Home
+    </button>
+    <br>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Release Year</th>
+                <th>Genre</th>
+                <th>Creator</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr style="
+            background-color: {{ media_colors[item.media_type] if media_colors and item.media_type in media_colors else '' }};
+            color: black;" >
+                    <td>{{ item.title }}</td>
+                    <td>{{ item.media_type }}</td>
+                    <td>{{ item.release_year }}</td>
+                    <td>{{ item.genre_name }}</td>
+                    <td>{{ item.creator }}</td>
+                    <td>
+                      <form method="POST"
+                      action="{{ url_for('add_to_list') }}"
+                      style="display:inline">
+                        <input type="hidden" name="media_id" value="{{ item.media_id }}">
+                      
+                        <select name="list_id" required>
+                          <option value="" disabled selected>— Select List —</option>
+                          {% for lid, lname in session_lists %}
+                            <option value="{{ lid }}">{{ lname }}</option>
+                          {% endfor %}
+                        </select>
+                        <button type="submit">Add to…</button>
+                      </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    <button onclick="window.location.href='{{ url_for('home') }}'">
+      Back to Home
+    </button>
+
+        <!-- hidden statistics panel -->
+        <div id="nerd-facts" style="display: none; margin-top: 20px;">
+            <h2>Nerd Facts</h2>
+            <div  
+                id="chart-container"
+                style="width: 500px; height: 500px; margin: auto;"
+            >
+                <canvas id="typeDistributionChart"> </canvas>
+            </div>
+
+            <h2 style="text-align:center;">Media Items by Release Year</h2>
+            <div style="width: 90%; max-width: 800px; margin: 0 auto;">
+                <canvas id="yearBarChart"></canvas>
+            </div>
+            <!-- total + breakdown -->
+            <p><strong>Total items:</strong> {{ total }}</p>
+            <table border="1" cellpadding="5">
+              <thead>
+                <tr>
+                  <th>Media Type</th>
+                  <th>Count</th>
+                  <th>Percentage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for f in facts %}
+                <tr>
+                  <td>{{ f.media_type }}</td>
+                  <td>{{ f.count }}</td>
+                  <td>{{ f.percent }} %</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+      
+            <!-- new: average release year -->
+            <p style="margin-top: 1em;">
+              <strong>Average Release Year:</strong>
+              {% if avg_year is not none %}
+                {{ avg_year }}
+              {% else %}
+                N/A
+              {% endif %}
+            </p>
+      
+            <!-- new: top creator per media type -->
+            <h3>Top Creator by Media Type</h3>
+            <table border="1" cellpadding="5">
+              <thead>
+                <tr>
+                  <th>Media Type</th>
+                  <th>Creator</th>
+                  <th># of Items</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for tc in top_creators %}
+                <tr>
+                  <td>{{ tc.media_type }}</td>
+                  <td>{{ tc.creator }}</td>
+                  <td>{{ tc.count }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+        </div>
+      
+
+        <button id="show-nerd-facts">Nerd Facts</button>
+        <script>
+            document.getElementById('show-nerd-facts').addEventListener('click', function() {
+              // show the panel
+              document.getElementById('nerd-facts').style.display = 'block';
+              this.style.display = 'none';
+          
+              // build the pie chart once
+              const facts = {{ facts|tojson }};
+              const labels = facts.map(f => f.media_type);
+              const counts = facts.map(f => f.count);
+          
+              const ctx = document.getElementById('typeDistributionChart').getContext('2d');
+              new Chart(ctx, {
+                type: 'pie',
+                data: {
+                  labels: labels,
+                  datasets: [{
+                    data: counts,
+                    // Chart.js will auto‑pick colors if you leave out backgroundColor
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'bottom'
+                    },
+                    title: {
+                      display: true,
+                      text: 'Collection by Media Type'
+                    }
+                  }
+                }
+              });
+            });
+          </script>
+          <script>
+            const yearData = {{ year_distribution | tojson }};
+            const yearLabels = yearData.map(item => item.year);
+            const yearCounts = yearData.map(item => item.count);
+        
+            const ctxBar = document.getElementById("yearBarChart").getContext("2d");
+            new Chart(ctxBar, {
+                type: "bar",
+                data: {
+                    labels: yearLabels,
+                    datasets: [{
+                        label: "Media Items",
+                        data: yearCounts,
+                        backgroundColor: "rgba(54, 162, 235, 0.7)",
+                        borderColor: "rgba(54, 162, 235, 1)",
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: "Number of Media Items by Release Year"
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        </script>
+        
+</body>
+</html>

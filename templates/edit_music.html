@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Music</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='edit.css') }}">
+</head>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+    <h1>Edit Music</h1>
+    <form method="POST">
+        <!-- Media title -->
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" value="{{ music['title'] }}" required><br>
+
+        <!-- Genre -->
+        <label for="genre_id">Genre:</label>
+        <select id="genre_id" name="genre_id" required>
+            {% for genre_id, genre_name in genres %}
+                <option value="{{ genre_id }}" {% if genre_id == music['genre_id'] %}selected{% endif %}>{{ genre_name }}</option>
+            {% endfor %}
+        </select><br>
+
+        <!-- Release Year -->
+        <label for="release_year">Release Year:</label>
+        <input type="number" id="release_year" name="release_year" value="{{ music['release_year'] }}" required><br>
+
+        <!-- Album Title -->
+        <label for="album_title">Album Title:</label>
+        <input type="text" id="album_title" name="album_title" value="{{ music['album_title'] }}" required><br>
+
+        <!-- Track Count -->
+        <label for="track_count">Track Count:</label>
+        <input type="number" id="track_count" name="track_count" value="{{ music['track_count'] }}" required><br>
+
+        <!-- Runtime -->
+        <label for="runtime">Runtime (minutes):</label>
+        <input type="number" id="runtime" name="runtime" value="{{ music['runtime'] }}" required><br>
+
+        <!-- Artist -->
+        <label for="creator_input">Artist (Singer/Band):</label>
+        <input type="text" id="creator_input" name="creator_input" value="{{ music['creator_name'] }}" required><br>
+
+        <!-- Location -->
+        <label for="location_input">Purchase Location:</label>
+        <input type="text" id="location_input" name="location_input" value="{{ music['loc_name'] or '' }}"><br>
+
+        <!-- Disc Count (Only shown if Vinyl) -->
+        {% if music['media_type'] == 'Vinyl' %}
+            <label for="disc_count">Disc Count:</label>
+            <input type="number" id="disc_count" name="disc_count" value="{{ music['disc_count'] or '' }}"><br>
+        {% endif %}
+
+        <div id="track-container">
+            {% for track in tracks %}
+                <div class="track-group">
+                    <label for="track_{{ track['track_id'] }}">Track {{ loop.index }}:</label>
+                    <input type="hidden" name="track_id" value="{{ track['track_id'] }}">
+                    <input type="text" id="track_{{ track['track_id'] }}" name="track_name" value="{{ track['track_name'] }}"><br>
+                </div>
+            {% endfor %}
+        </div>
+
+        <h4>Add New Tracks</h4>
+        <div id="new-tracks"></div>
+        <button type="button" onclick="addTrackInput()">+ Add Track</button>
+
+        <script>
+            function addTrackInput() {
+                const container = document.getElementById('new-tracks');
+                const index = container.children.length + 1;
+
+                const wrapper = document.createElement('div');
+                wrapper.classList.add('new-track-group');
+
+                const label = document.createElement('label');
+                label.textContent = `New Track ${index}:`;
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.name = 'new_track_name';
+                input.placeholder = 'Enter track name';
+
+                wrapper.appendChild(label);
+                wrapper.appendChild(input);
+                container.appendChild(wrapper);
+            }
+        </script>
+
+
+
+        <button type="submit">Save Changes</button>
+    </form>
+    <a href="{{ url_for('view_music') }}">Cancel</a>
+</body>
+</html>

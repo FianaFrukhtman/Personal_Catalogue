@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Video Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='edit.css') }}">
+</head>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+    <h1>Edit Video Game</h1>
+    <form method="POST">
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" value="{{ videogame.title }}" required><br>
+
+        <label for="genre_id">Genre:</label>
+        <select id="genre_id" name="genre_id" required>
+            {% for genre in genres %}
+            <option value="{{ genre[0] }}" {% if genre[0] == videogame.genre_id %}selected{% endif %}>{{ genre[1] }}</option>
+            {% endfor %}
+        </select><br>
+
+        <label for="release_year">Release Year:</label>
+        <input type="number" id="release_year" name="release_year" value="{{ videogame.release_year }}" required><br>
+
+        <label for="console">Console:</label>
+        <input type="text" id="console" name="console" value="{{ videogame.console }}" required><br>
+
+        <label for="developer_input">Developer:</label>
+        <input type="text" id="developer_input" name="developer_input" value="{{ videogame.developer }}" required><br>
+
+        <label for="location_input">Purchase Location:</label>
+        <input type="text" id="location_input" name="location_input" value="{{ videogame.loc_name }}"><br>
+
+        <button type="submit">Save Changes</button>
+    </form>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your Wishlist</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='view.css') }}">
+</head>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+  <h1>Your Wishlist</h1>
+
+  <button onclick="window.location.href='{{ url_for('add_wishlist') }}'">+ Add New Wishlist Entry</button>
+
+  <ul>
+    {% for wid, title, mtype, genre, year, creator in wishes %}
+      <li>
+        <strong>{{ title }}</strong>
+        ({{ mtype }}{% if genre %}, {{ genre }}{% endif %}{% if year %}, {{ year }}{% endif %})
+        by {{ creator or '—' }}
+        <form method="post"
+              action="{{ url_for('convert_wishlist', wish_id=wid) }}"
+              style="display:inline">
+          <button type="submit">Mark as Owned</button>
+        </form>
+        <form method="post"
+              action="{{ url_for('delete_wishlist', wish_id=wid) }}"
+              style="display:inline">
+          <button type="submit">Remove</button>
+        </form>
+      </li>
+    {% else %}
+      <li><em>Your wishlist is empty.</em></li>
+    {% endfor %}
+  </ul>
+
+  <br>
+  <button onclick="window.location.href='{{ url_for('home') }}'">
+    Back to Home
+  </button>
+</body>
+</html>

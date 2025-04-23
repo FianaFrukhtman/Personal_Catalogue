@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
+    <title>Home</title>
+</head>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+    <header>
+        <div class="header-container">
+            <h1>Welcome, {{ username }}!</h1>
+            <div class="header-buttons">
+                <button onclick="window.location.href='{{ url_for('settings') }}'" class="settings-btn">Settings</button>
+            </div>
+            <button onclick="window.location.href='{{ url_for('logout') }}'" class="logout-btn">Logout</button>
+        </div>
+    </header>
+    
+    <main>
+        <p>What would you like to do today?</p>
+        <div class = >
+        <button class="view-all-btn" onclick="window.location.href='{{ url_for('view_all') }}'">View All Items</button>
+        <button class="view-all-btn" onclick="window.location.href='{{ url_for('view_lists') }} '">View Lists</a></button>
+        <button class="view-all-btn" onclick="window.location.href='{{ url_for('view_wishlist') }} '"> View Wishlist</a></button>
+        </div>
+        <div class="button-box-container">
+            <!-- Add Box -->
+            <div class="button-box">
+                <h2>Add Items</h2>
+                <button onclick="window.location.href='{{ url_for('add_book') }}'">Add a Book</button>
+                <button onclick="window.location.href='{{ url_for('add_dvd') }}'">Add a DVD</button>
+                <button onclick="window.location.href='{{ url_for('add_videogame') }}'">Add a Video Game</button>
+                <button onclick="window.location.href='{{ url_for('add_music') }}'">Add your Music</button>
+            </div>
+    
+            <!-- View Box -->
+            <div class="button-box">
+                <h2>View Items</h2>
+                <button onclick="window.location.href='{{ url_for('view_books') }}'">View Your Books</button>
+                <button onclick="window.location.href='{{ url_for('view_dvds') }}'">View Your DVDs</button>
+                <button onclick="window.location.href='{{ url_for('view_videogames') }}'">View Your Video Games</button>
+                <button onclick="window.location.href='{{ url_for('view_music') }}'">View your Music</button>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <p>Created by Fiana Frukhtman</p>
+    </footer>
+</body>
+</html>

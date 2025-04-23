@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Music</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='view.css') }}">
+</head>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+    <h1>Your Music Collection</h1>
+
+    <form method="GET">
+        <label for="genre">Filter by Genre:</label>
+        <select id="genre" name="genre">
+            <option value="">All</option>
+            {% for genre in genres %}
+                <option value="{{ genre }}" {% if genre == selected_genre %}selected{% endif %}>{{ genre }}</option>
+            {% endfor %}
+        </select>
+    
+        <label for="sort">Sort by:</label>
+        <select id="sort" name="sort">
+            <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
+            <option value="creator" {% if sort_by == 'creator' %}selected{% endif %}>Artist</option>
+            <option value="album_title" {% if sort_by == 'album_title' %}selected{% endif %}>Album</option>
+            <option value="year" {% if sort_by == 'year' %}selected{% endif %}>Release Year</option>
+            <option value="runtime" {% if sort_by == 'runtime' %}selected{% endif %}>Runtime</option>
+        </select>
+    
+        <label for="media_format">Format:</label>
+        <select id="media_format" name="media_format">
+            <option value="">All Formats</option>
+            <option value="CD" {% if selected_format == 'CD' %}selected{% endif %}>CD</option>
+            <option value="Vinyl" {% if selected_format == 'Vinyl' %}selected{% endif %}>Vinyl</option>
+        </select>
+    
+        <br><br>
+    
+        <label for="search_creator">Search by Creator:</label>
+        <input type="text" id="search_creator" name="search_creator" value="{{ search_creator }}">
+    
+        <label for="search_track">Search by Track:</label>
+        <input type="text" id="search_track" name="search_track" value="{{ search_track }}">
+    
+        <button type="submit">Apply</button>
+    </form>
+    <br>
+
+
+    <!-- Music Items Table -->
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Media Type</th>
+                <th>Album Title</th>
+                <th>Track Count</th>
+                <th>Runtime</th>
+                <th>Creator</th>
+                <th>Genre</th>
+                <th>Release Year</th>
+                <th>Tracks</th>
+                <th>Actions</th> <!-- New column for actions -->
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in music_items %}
+                <tr>
+                    <td>{{ item.title }}</td>
+                    <td>{{ item.media_type }}</td>
+                    <td>{{ item.album_title }}</td>
+                    <td>{{ item.track_count }}</td>
+                    <td>{{ item.runtime }}</td>
+                    <td>{{ item.creator }}</td>
+                    <td>{{ item.genre }}</td>
+                    <td>{{ item.release_year }}</td>
+                    <td>{{ item.track_names or 'N/A' }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_music', media_id=item.media_id) }}" style="display:inline;">
+                            <button type="button" onclick="confirmDelete(this.form)">Delete</button>
+                        <!-- Edit button -->
+                        <a href="{{ url_for('edit_music', media_id=item.media_id) }}">
+                            <button type="button">Edit</button>
+                        </a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="8" style="text-align:center;">No music items found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        function confirmDelete(form) {
+            if (confirm('Are you sure you want to delete this DVD?')) {
+                form.submit();
+            }
+        }
+    </script>
+</body>
+    <button type="button" onclick="location.href='{{ url_for('home') }}'">Back to Home</button>
+
+</html>

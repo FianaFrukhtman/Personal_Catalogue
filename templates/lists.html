@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your Lists</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='view.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='lists.css') }}">
+</head>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+  <div class="list-container">
+  <h1>Your Lists</h1>
+  <ul>
+    {% for lid, name in lists %}
+      <li>
+        <a href="{{ url_for('show_list', list_id=lid) }}"
+          class="list-card">
+          <span class="list-card__title">{{ name }}</span>
+        </a>
+        <!-- delete‑list form -->
+        <form
+          method="POST"
+          action="{{ url_for('delete_list', list_id=lid) }}"
+          style="display:inline; margin-left:1em;"
+        >
+          <button
+            type="button"
+            onclick="if(confirm('Really delete “{{ name }}” and all its items?')) this.form.submit();"
+          >
+            Delete
+          </button>
+        </form>
+  
+      </li>
+    {% else %}
+      <li><em>No lists yet.</em></li>
+    {% endfor %}
+  </ul>
+
+  <h2>Create a New List</h2>
+  <form method="post" action="{{ url_for('create_list') }}">
+    <input type="text" name="name" placeholder="List name" required>
+    <button type="submit">Create</button>
+  </form>
+
+  <br>
+  <button onclick="window.location.href='{{ url_for('home') }}'">
+    Back to Home
+  </button>
+</div>
+</body>
+</html>

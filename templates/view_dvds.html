@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View DVDs</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='view.css') }}">
+</head>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+    <h1>Your DVDs</h1>
+    <form method="GET" action="{{ url_for('view_dvds') }}">
+        <label for="genre">Filter by Genre:</label>
+        <select id="genre" name="genre">
+            <option value="">All</option>
+            {% for genre in genres %}
+                <option value="{{ genre }}" {% if genre == selected_genre %}selected{% endif %}>{{ genre }}</option>
+            {% endfor %}
+        </select>
+        <label for="sort">Sort by:</label>
+        <select id="sort" name="sort">
+            <option value="">None</option>
+            <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
+            <option value="director" {% if sort_by == 'director' %}selected{% endif %}>Director</option>
+            <option value="runtime" {% if sort_by == 'runtime' %}selected{% endif %}>Runtime</option>
+        </select>
+        <button type="submit">Apply</button>
+    </form>
+    <br>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Genre</th>
+                <th>Release Year</th>
+                <th>Runtime</th>
+                <th>Studio</th>
+                <th>DVD Type</th>
+                <th>Director</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dvd in dvds %}
+                <tr>
+                    <td>{{ dvd.title }}</td>
+                    <td>{{ dvd.genre }}</td>
+                    <td>{{ dvd.release_year }}</td>
+                    <td>{{ dvd.runtime }}</td>
+                    <td>{{ dvd.studio }}</td>
+                    <td>{{ dvd.dvd_type }}</td>
+                    <td>{{ dvd.director }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_dvd', dvd_id=dvd.media_id) }}" style="display:inline;">
+                            <button type="button" onclick="confirmDelete(this.form)">Delete</button>
+                        </form>
+                        <a href="{{ url_for('edit_dvd', dvd_id=dvd.media_id) }}">
+                            <button type="button">Edit</button>
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        function confirmDelete(form) {
+            if (confirm('Are you sure you want to delete this DVD?')) {
+                form.submit();
+            }
+        }
+    </script>
+
+    <br>
+    <button onclick="window.location.href='{{ url_for('home') }}'">Return to Home Page</button>
+</body>
+</html>

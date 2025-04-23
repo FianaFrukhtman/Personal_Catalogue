@@ -1,0 +1,62 @@
+<!-- templates/add_wishlist.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Add to Wishlist</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='view.css') }}">
+</head>
+<body class="{{ 'night-mode' if night_mode else '' }}">
+  <h1>Add to Wishlist</h1>
+
+  <form method="post">
+    <label>
+      Title:<br>
+      <input type="text" name="title" required>
+    </label><br><br>
+
+    <label>
+      Type:<br>
+      <select name="media_type">
+        <option>Book</option>
+        <option>DVD</option>
+        <option>VideoGame</option>
+        <option>CD</option>
+        <option>Vinyl</option>
+      </select>
+    </label><br><br>
+
+    <label>
+      Genre:<br>
+      <select name="genre_id">
+        <option value="">— None —</option>
+        {% for gid, gname in genres %}
+          <option value="{{ gid }}">{{ gname }}</option>
+        {% endfor %}
+      </select>
+    </label><br><br>
+
+    <label>
+      Release Year:<br>
+      <input type="number" name="release_year" min="1800" max="2099">
+    </label><br><br>
+
+    <label>
+      Creator (name):<br>
+      <input type="text" name="creator_name" required>
+    </label><br><br>
+
+    <label>
+      Notes / Desired Edition:<br>
+      <textarea name="notes" rows="3"></textarea>
+    </label><br><br>
+
+    <button type="submit">Save to Wishlist</button>
+  </form>
+
+  <p>
+    <a href="{{ url_for('view_wishlist') }}">← Back to Wishlist</a>
+  </p>
+</body>
+</html>

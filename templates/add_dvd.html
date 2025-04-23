@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add DVD</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='add.css') }}">
+    <script>
+        let directors = {{ directors|tojson }};
+        let locations = {{ locations|tojson }};
+    
+        function filterSuggestions(inputId, suggestions, listId) {
+            const input = document.getElementById(inputId);
+            const list = document.getElementById(listId);
+            const filter = input.value.toLowerCase();
+            list.innerHTML = '';
+    
+            suggestions
+                .filter(item => item.toLowerCase().includes(filter))
+                .forEach(item => {
+                    const option = document.createElement('div');
+                    option.textContent = item;
+                    option.onclick = () => {
+                        input.value = item;
+                        list.innerHTML = '';
+                    };
+                    list.appendChild(option);
+                });
+        }
+    
+        function hideSuggestions() {
+            document.querySelectorAll('.suggestions').forEach(el => el.innerHTML = '');
+        }
+    
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('input, textarea, select').forEach(input => {
+                input.addEventListener('focus', hideSuggestions);
+            });
+        });
+    </script>
+</head>
+
+<body class="{{ 'night-mode' if night_mode else '' }}">
+    <h1>Add DVD</h1>
+    <form method="POST" action="{{ url_for('add_dvd') }}">
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" required><br><br>
+
+        <label for="genre_id">Genre:</label>
+        <select id="genre_id" name="genre_id" required>
+            {% for genre_id, genre_name in genres %}
+                <option value="{{ genre_id }}">{{ genre_name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="release_year">Release Year:</label>
+        <input type="number" id="release_year" name="release_year" required><br><br>
+
+        <label for="runtime">Runtime (minutes):</label>
+        <input type="number" id="runtime" name="runtime" required><br><br>
+
+        <label for="studio">Studio:</label>
+        <input type="text" id="studio" name="studio" required><br><br>
+
+        <label for="dvd_type">DVD Type:</label>
+        <input type="text" id="dvd_type" name="dvd_type" required><br><br>
+
+        <label for="director_input">Director:</label>
+        <div class="input-wrapper">
+            <input type="text" id="director_input" name="director_input"
+                   oninput="filterSuggestions('director_input', directors, 'director_suggestions')">
+            <div id="director_suggestions" class="suggestions"></div>
+        </div><br>
+        
+        <label for="location_input">Purchase Location:</label>
+        <div class="input-wrapper">
+            <input type="text" id="location_input" name="location_input"
+                   oninput="filterSuggestions('location_input', locations, 'location_suggestions')">
+            <div id="location_suggestions" class="suggestions"></div>
+        </div><br>
+        
+
+        <button type="submit">Add DVD</button>
+    </form>
+    <br>
+    <button onclick="window.location.href='{{ url_for('home') }}'">Return to Home Page</button>
+</body>
+</html>
