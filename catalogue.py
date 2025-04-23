@@ -6,7 +6,7 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 DATABASE = 'Personal.db'
 
-
+#Intialize the database 
 def init_db():
     with sqlite3.connect(DATABASE) as conn:
         cur = conn.cursor()
@@ -131,66 +131,40 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
             FOREIGN KEY(genre_id) REFERENCES Genres(genre_id) ON DELETE SET NULL
             );
-
         ''')
-        
-        # Insert predefined genres
-        genres = [
-            ('Action',),
-            ('Adventure',),
-            ('Comedy',),
-            ('Drama',),
-            ('Fantasy',),
-            ('Horror',),
-            ('Mystery',),
-            ('Romance',),
-            ('Sci-Fi',),
-            ('Thriller',),
-            # Music-specific genres
-            ('Pop',),
-            ('Rock',),
-            ('Jazz',),
-            ('Classical',),
-            ('Hip-Hop',),
-            ('Electronic',),
-            ('Country',),
-            ('Blues',),
-            ('Reggae',),
-            ('Soul',),
-            ('Metal',),
-            ('Folk',),
-            ('R&B',),
-            ('Punk',)
+        genres = [ # Predefined genres
+            ('Action',), ('Adventure',),('Comedy',),('Drama',),('Fantasy',),('Horror',),('Mystery',),
+            ('Romance',),('Sci-Fi',),('Thriller',),('Fiction',),('Non-Fiction',),('Pop',),('Rock',),
+            ('Jazz',),('Classical',),('Hip-Hop',),('Electronic',),('Country',),('Blues',),('Reggae',),
+            ('Soul',),('Metal',),('Folk',),('R&B',),('Punk',)
         ]
-        cur.executemany('INSERT OR IGNORE INTO Genres (genre_name) VALUES (?)', genres)
-        
-        # Insert predefined creators
-        creators = [
+        cur.executemany('INSERT OR IGNORE INTO Genres (genre_name) VALUES (?)', genres) #Insert into DB
+
+        creators = [ #Predefined creators
             ('Unknown Author', 'Author'),
             ('Unknown Director', 'Director'),
             ('Unknown Singer/Band', 'Singer/Band'),
             ('Unknown Designer', 'Designer')
         ]
         cur.executemany('INSERT OR IGNORE INTO Media_Creators (name, type) VALUES (?, ?)', creators)
-        
-        conn.commit()
+        conn.commit() # Create Database and insert predifined values if not already 
 
-@app.route('/register', methods=['GET', 'POST'])
+@app.route('/register', methods=['GET', 'POST'])  #Register page route
 def register():
-    if request.method == 'POST':
-        username = request.form['username'].strip()
+    if request.method == 'POST': #Take users entered username and password
+        username = request.form['username'].strip() # ignore whitespaces
         password = request.form['password']
         
         # Check for special characters in username and password
         if not re.match("^[a-zA-Z0-9_]*$", username):
-            flash('Username can only contain letters, numbers, and underscores.')
+            flash('Username can only contain letters, numbers, and underscores.') #Flash message to user
             return redirect(url_for('register'))
         
         if not re.match("^[a-zA-Z0-9_]*$", password):
             flash('Password can only contain letters, numbers, and underscores.')
             return redirect(url_for('register'))
         
-        with sqlite3.connect(DATABASE) as conn:
+        with sqlite3.connect(DATABASE) as conn: #Check if entered username already exists against DB
             cur = conn.cursor()
             cur.execute("SELECT * FROM Users WHERE username = ?", (username,))
             user = cur.fetchone()
@@ -198,10 +172,10 @@ def register():
             if user:
                 flash('Username already exists. Please choose a different username.')
                 return redirect(url_for('register'))
-            
+            #If not already in DB enter username and password into the DB
             cur.execute("INSERT INTO Users (username, password) VALUES (?, ?)", (username, password))
             conn.commit()
-
+            #Create a wishlist for ever user
             new_user_id = cur.lastrowid
             cur.execute(
             "INSERT INTO User_Lists (user_id, name) VALUES (?, 'Wishlist')",
@@ -211,19 +185,19 @@ def register():
         flash('Registration successful. Please log in.')
         return redirect(url_for('login'))
     
-    return render_template('register.html')
+    return render_template('register.html') 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST']) #Login page route 
 def login():
-    if request.method == 'POST':
+    if request.method == 'POST': 
         username = request.form['username'].strip()
         password = request.form['password']
         
-        with sqlite3.connect(DATABASE) as conn:
+        with sqlite3.connect(DATABASE) as conn: 
             cur = conn.cursor()
             cur.execute("SELECT * FROM Users WHERE username = ? AND password = ?", (username, password))
             user = cur.fetchone()
-            
+            #Check username and password against user table in DB
             if user:
                 session['user_id'] = user[0]
                 session['username'] = user[1]  # Store the username in the session
@@ -234,11 +208,11 @@ def login():
     
     return render_template('login.html')
 
-@app.route('/')
+@app.route('/') # Welcome page route, first page you see when you open the app
 def welcome():
     return render_template('welcome.html')
 
-@app.route('/home')
+@app.route('/home')  #Landing page route, after login
 def home():
     if 'username' in session:
         username = session['username']
@@ -246,9 +220,9 @@ def home():
     else:
         return redirect(url_for('login'))
 
-@app.route('/add_book', methods=['GET', 'POST'])
+@app.route('/add_book', methods=['GET', 'POST']) #Add book page route
 def add_book():
-    if request.method == 'POST':
+    if request.method == 'POST': #Form for all book attributes
         title = request.form['title']
         genre_id = request.form['genre_id']
         release_year = request.form['release_year']
@@ -261,7 +235,6 @@ def add_book():
         
         with sqlite3.connect(DATABASE) as conn:
             cur = conn.cursor()
-            
             # Check if the author already exists, otherwise insert a new one
             cur.execute('SELECT creator_id FROM Media_Creators WHERE name = ? AND type = "Author"', (author_name,))
             author = cur.fetchone()
@@ -294,7 +267,7 @@ def add_book():
         
         return redirect(url_for('view_books'))
     
-    with sqlite3.connect(DATABASE) as conn:
+    with sqlite3.connect(DATABASE) as conn:  #Load all genres, authors and locations for the dropdowns
         cur = conn.cursor()
         cur.execute('SELECT genre_id, genre_name FROM Genres')
         genres = cur.fetchall()
@@ -302,7 +275,7 @@ def add_book():
         authors = [row[0] for row in cur.fetchall()]
         cur.execute('SELECT loc_name FROM Purchase_Locations')
         locations = [row[0] for row in cur.fetchall()]
-    
+    #render template with all the genres, authors and locations from database
     return render_template('add_book.html', genres=genres, authors=authors, locations=locations)
 
 @app.route('/add_dvd', methods=['GET', 'POST'])
@@ -1442,7 +1415,6 @@ def delete_list(list_id):
             conn.commit()
     return redirect(url_for('view_lists'))
 
-
 @app.route('/wishlist')
 def view_wishlist():
     if 'user_id' not in session:
@@ -1459,7 +1431,6 @@ def view_wishlist():
         ''', (uid,))
         wishes = cur.fetchall()
     return render_template('wishlist.html', wishes=wishes)
-
 
 @app.route('/wishlist/add', methods=['GET','POST'])
 def add_wishlist():
@@ -1491,7 +1462,6 @@ def add_wishlist():
         genres = cur.fetchall()
     return render_template('add_wishlist.html', genres=genres)
 
-
 @app.route('/wishlist/delete/<int:wish_id>', methods=['POST'])
 def delete_wishlist(wish_id):
     if 'user_id' not in session:
@@ -1502,7 +1472,6 @@ def delete_wishlist(wish_id):
         cur.execute('DELETE FROM Wishlist_Items WHERE wishlist_id = ? AND user_id = ?', (wish_id,uid))
         conn.commit()
     return redirect(url_for('view_wishlist'))
-
 
 @app.route('/wishlist/convert/<int:wish_id>', methods=['POST'])
 def convert_wishlist(wish_id):
